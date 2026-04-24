@@ -12,7 +12,7 @@
 
 本章涉及的核心概念关系：
 
-- **compressed URL**：系统分配的实体标识符（如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"dataSourceUrl"`），是所有 API 调用中引用实体的唯一合法方式。永远不要自行构造——只使用 `loadPage`、`loadDatabase`、`loadAgent` 等函数返回的值。
+- **compressed URL**：系统分配的实体标识符（如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`），是所有 API 调用中引用实体的唯一合法方式。永远不要自行构造——只使用 `loadPage`、`loadDatabase`、`loadAgent` 等函数返回的值。
 - **CREATE-\* 占位符**：仅在同一次 `createDatabase` / `createAgent` 调用内部使用的临时 key，系统会在创建完成后替换为真实 compressed URL。跨调用使用 CREATE-\* 必定失败。
 - **property key**：数据源 schema 中属性的列名，大小写敏感。`"Status"` ≠ `"status"`。
 - **展开列名**：date 和 place 类型的属性在 SQL 查询和 propertyUpdates 中使用展开格式（如 `"date:Due Date:start"`、`"place:Location:address"`），而非直接使用属性名。
@@ -57,7 +57,7 @@
   "command": "set",
   "path": ["integrations", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "permissions"],
   "value": [
-    { "identifier": "URL", "actions": ["edit"] },
+    { "identifier": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "actions": ["edit"] },
     { "identifier": "*", "actions": ["view"] }
     // ... 保留原有权限项
   ]
@@ -82,7 +82,7 @@
 在调用方 agent 的 Notion integration permissions 中添加：
 
 ```jsonc
-{ "identifier": { "type": "agent", "url": "okrs" }, "actions": ["interact"] }
+{ "identifier": { "type": "agent", "url": "dataSourceUrl" }, "actions": ["interact"] }
 ```
 
 **预防策略**：
@@ -170,7 +170,7 @@
 
 ```jsonc
 {
-  "url": "dataSourceUrl",
+  "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   "propertyUpdates": {
     "place:Location:address": "1600 Pennsylvania Ave NW, Washington, DC 20500"
   }
@@ -207,7 +207,7 @@ SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe
 - **propertyUpdates** 中设置 checkbox：
 
 ```jsonc
-{ "url": "okrs", "propertyUpdates": { "Is Active": true } }
+{ "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "propertyUpdates": { "Is Active": true } }
 ```
 
 **预防策略**：
@@ -249,16 +249,16 @@ FROM "dataSourceUrl"
 { "Tags": ["Important", "Urgent"] }
 
 // relation (limit=1): 单值字符串
-{ "Project": "OPTIONAL_NOTICE" }
+{ "Project": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 
 // relation (无 limit): 数组
-{ "Related Tasks": ["connector-*-1", "https://www.notion.so/7fd3f523da6944cd8119bcfeb2d8df72"] }
+{ "Related Tasks": ["dataSourceUrl", "okrs"] }
 
 // person (limit=1): 单值字符串
-{ "Owner": "okrs" }
+{ "Owner": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 
 // person (无 limit): 数组
-{ "Reviewers": ["okrs", "teams"] }
+{ "Reviewers": ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"] }
 ```
 
 **预防策略**：
@@ -299,7 +299,7 @@ FROM "dataSourceUrl"
 ```
 
 **预防策略**：
-- 所有 record key 只用两种格式：`CREATE-*`（新建）或 `xxx`（已有）
+- 所有 record key 只用两种格式：`CREATE-*`（新建）或 compressed URL（已有）
 - display name 只出现在对象内部的 `name` 字段中
 
 **深钻指针**：`modules/notion/databases/AGENTS.md`（Identifiers: CREATE-\* vs compressed URLs）、`modules/notion/databases/index.ts`（CreateDatabase 注释）
@@ -464,13 +464,13 @@ FROM "dataSourceUrl"
 
 ```jsonc
 // 1. 先 loadDatabase 获取 wiki 信息
-const db = await loadDatabase({ url: "URL" })
+const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9"
+// db.configuration.wikiPageUrl === "dataSourceUrl"
 
 // 2. 用 wikiPageUrl 作为 parent
 await createPage({
-  parent: { type: "page", url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9" },  // wikiPageUrl
+  parent: { type: "page", url: "dataSourceUrl" },  // wikiPageUrl
   properties: { title: "新 Wiki 页面" }
 })
 ```
@@ -497,13 +497,13 @@ await createPage({
 // 创建 linked database
 await createDatabase({
   name: "Tasks View",
-  parent: { type: "page", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75" },
+  parent: { type: "page", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },
   dataSources: {},  // linked database 不拥有 data source
   views: {
     "CREATE-view": {
       type: "table",
       name: "All Tasks",
-      dataSourceUrl: "okrs"  // 引用外部 data source
+      dataSourceUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"  // 引用外部 data source
     }
   }
 })
@@ -614,7 +614,7 @@ await search({
 
 ### 6.7.1 createAndRunThread 被拒（无 interact 权限）
 
-**典型症状**：调用 `createAndRunThread({ agentUrl: "URL" })` 时被拒绝。
+**典型症状**：调用 `createAndRunThread({ agentUrl: "dataSourceUrl" })` 时被拒绝。
 
 **根因分析**：Custom Agent 向另一个 Custom Agent 发消息需要 interact 权限。该权限在调用方的 Notion integration 中声明，而非目标方。
 
@@ -631,16 +631,16 @@ await search({
 
 **典型症状**：期望从 `createAndRunThread` 的返回中获取结构化数据（如 JSON 对象），但只收到纯文本字符串。
 
-**根因分析**：`createAndRunThread` 返回的 `response` 字段只包含子 agent 的最终文本回复。子 agent 在运行过程中可能执行了页面创建、数据库更新等副作用操作，但这些操作的结果不会通过 response 返回——response 只是文本。
+**根因分析**：`createAndRunThread` 返回的 `response` 字段只包含 Sub-thread（子线程）的最终文本回复。Sub-thread 中的 agent 在运行过程中可能执行了页面创建、数据库更新等副作用操作，但这些操作的结果不会通过 response 返回——response 只是文本。
 
 **修复方案**：
 
-1. 如果需要子 agent 传回结构化信息，在 instructions 中要求子 agent 以特定格式（如 JSON）输出到 response 文本中，然后在父 agent 端解析
-2. 如果需要子 agent 的操作产物（如创建的页面 URL），让子 agent 在 response 中显式报告
-3. 对于复杂数据传递，让子 agent 将结果写入约定的 Notion 页面，父 agent 通过 `loadPage` 读取
+1. 如果需要 Sub-thread 传回结构化信息，在 instructions 中要求以特定格式（如 JSON）输出到 response 文本中，然后在调用方解析
+2. 如果需要 Sub-thread 的操作产物（如创建的页面 URL），要求在 response 中显式报告
+3. 对于复杂数据传递，让 Sub-thread 将结果写入约定的 Notion 页面，调用方通过 `loadPage` 读取
 
 **预防策略**：
-- 设计子 agent 的 instructions 时，明确规定返回格式
+- 设计 Sub-thread 的 instructions 时，明确规定返回格式
 - 不要假设 response 包含 tool call 结果或中间状态——它只是最终文本
 
 **深钻指针**：`modules/notion/threads/index.ts`（createAndRunThread 返回类型说明）
@@ -654,8 +654,8 @@ await search({
 **修复方案**：
 
 1. 合并调用：将多个小任务合并到一次 `createAndRunThread` 的 instructions 中
-2. 复用 thread：通过 `threadUrl` 参数续写已有子 thread，而非每次创建新 thread
-3. 分层架构：如果 50 次不够，设计多层 agent 架构——父 agent 调 coordinator，coordinator 再各调 50 次
+2. 复用 thread：通过 `threadUrl` 参数续写已有 Sub-thread，而非每次创建新的
+3. 分层架构：如果 50 次不够，设计多层 agent 架构——上层 agent 调 coordinator，coordinator 再各调 50 次
 
 **预防策略**：
 - 在多 agent 工作流设计阶段就预估调用次数
@@ -774,10 +774,10 @@ await runTool({
 
 1. 加载内容前评估必要性——不是所有相关内容都需要加载
 2. 使用摘要替代全文（桥梁文件模式）
-3. 将长流程拆分为多个 sub-thread，每个 thread 有独立的 context 窗口
+3. 将长流程拆分为多个 Sub-thread，每个 thread 有独立的 context 窗口
 
-**预防策略**：
-- 铁律：不加载其他章节全文，只读 BOOK_SUMMARY 中的摘要
+**最佳实践**：
+- 推荐策略：不加载无关全文，优先使用桥梁文件中的摘要
 - 大页面只加载需要的部分——如果只需要属性信息，`loadPage` 后只关注 properties
 - 搜索结果的 snippet 通常已足够，不需要对每个结果都 `loadPage`
 
@@ -796,26 +796,26 @@ await runTool({
 2. 搜索结果的 snippet 和 properties 通常已经足够回答问题
 3. SQL 查询（`querySql`）可以精确获取需要的列和行，避免全量加载
 
-**预防策略**：
+**最佳实践**：
 - 操作数据库页面？先 `querySql` 定位目标行，再对特定页面 `loadPage`
-- 需要跨页面信息？设计桥梁文件（如 BOOK_SUMMARY）集中存储摘要
+- 需要跨页面信息？设计桥梁文件集中存储摘要
 - module files 按需读取——`AGENTS.md` 中有 file routing 指引，遵循指引加载
 
-### 6.9.3 BOOK_SUMMARY 过旧
+### 6.9.3 桥梁文件过旧
 
-**典型症状**：跨章引用的信息与实际章节内容不一致，术语或结论过时。
+**典型症状**：多 agent 协作中，后续 agent 基于共享摘要文件做出的引用或决策与实际内容不一致，术语或结论过时。
 
-**根因分析**：BOOK_SUMMARY 是人工（总编）维护的摘要文件。如果总编未在章节验收后及时更新，后续章节的著作郎会基于过时摘要写作。
+**根因分析**：在多 agent 架构中，常用共享摘要文件（桥梁文件）传递跨 agent context，避免每个 agent 加载全量内容。如果协调者角色未在阶段完成后及时更新桥梁文件，后续执行者角色会基于过时摘要工作。
 
 **修复方案**：
 
-1. 写作前检查 BOOK_SUMMARY 中目标章节的 `Status` 字段——`⚪ Not started` 表示该章还没有可用摘要
-2. 如果摘要信息与已知事实矛盾，在交稿摘要中向总编报告
-3. 不要自行修改 BOOK_SUMMARY——这是总编的职责
+1. 使用桥梁文件前，检查其中目标条目的状态字段——如标记为未完成，说明该部分还没有可用摘要
+2. 如果摘要信息与已知事实矛盾，在交付报告中向协调者角色反馈
+3. 执行者角色不应自行修改桥梁文件——更新权归协调者角色所有
 
-**预防策略**：
-- 总编协议：每章验收通过后，立即更新 BOOK_SUMMARY
-- 著作郎协议：交稿时返回新增术语清单，方便总编更新 glossary 和 BOOK_SUMMARY
+**最佳实践**：
+- 协调者协议：每个阶段验收通过后，立即更新桥梁文件
+- 执行者协议：交付时返回新增术语和关键发现清单，方便协调者更新桥梁文件和术语表
 
 ---
 
@@ -830,15 +830,15 @@ await runTool({
 **低效模式**：
 ```jsonc
 // ❌ 逐条删除
-await deletePages({ pageUrls: ["user://332d872b-594c-816c-a9a9-000276e2496b"] })
-await deletePages({ pageUrls: ["user://34cc9fa4-4e97-8194-b96b-0027cef5b078"] })
-await deletePages({ pageUrls: ["https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c"] })
+await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"] })
+await deletePages({ pageUrls: ["dataSourceUrl"] })
+await deletePages({ pageUrls: ["okrs"] })
 ```
 
 **优化方案**：
 ```jsonc
 // ✅ 批量删除
-await deletePages({ pageUrls: ["user://332d872b-594c-816c-a9a9-000276e2496b", "user://34cc9fa4-4e97-8194-b96b-0027cef5b078", "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c"] })
+await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl", "okrs"] })
 ```
 
 **同理适用于**：
@@ -855,9 +855,9 @@ await deletePages({ pageUrls: ["user://332d872b-594c-816c-a9a9-000276e2496b", "u
 **低效模式**：
 ```jsonc
 // ❌ 串行加载无依赖的资源
-const page1 = await loadPage({ url: "https://www.notion.so/88a395759257472b89f9d38ae3a1df2f" })
-const page2 = await loadPage({ url: "https://www.notion.so/16367caadd7e43a9ac3ae6592a8c6370" })
-const db = await loadDatabase({ url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9" })
+const page1 = await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const page2 = await loadPage({ url: "dataSourceUrl" })
+const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 ```
 
 **优化方案**：
@@ -882,18 +882,18 @@ const db = await loadDatabase({ url: "integration://755c9fa4-4e97-8185-a342-0003
 **低效模式**：
 ```jsonc
 // ❌ 每次更新前都重新加载
-await loadPage({ url: "https://www.notion.so/edc97e89538a42358144f698122e1174" })
-await updatePage({ url: "https://www.notion.so/edc97e89538a42358144f698122e1174", propertyUpdates: { Status: "In progress" } })
-await loadPage({ url: "https://www.notion.so/edc97e89538a42358144f698122e1174" })  // 不必要的重复加载
-await updatePage({ url: "https://www.notion.so/edc97e89538a42358144f698122e1174", contentUpdates: [{ oldStr: "...", newStr: "..." }] })
+await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+await updatePage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", propertyUpdates: { Status: "In progress" } })
+await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })  // 不必要的重复加载
+await updatePage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", contentUpdates: [{ oldStr: "...", newStr: "..." }] })
 ```
 
 **优化方案**：
 ```jsonc
 // ✅ 加载一次，合并多个更新到一次调用
-await loadPage({ url: "https://www.notion.so/edc97e89538a42358144f698122e1174" })
+await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 await updatePage({
-  url: "https://www.notion.so/edc97e89538a42358144f698122e1174",
+  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: { Status: "In progress" },
   contentUpdates: [{ oldStr: "...", newStr: "..." }]
 })
