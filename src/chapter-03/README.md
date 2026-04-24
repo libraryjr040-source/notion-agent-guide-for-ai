@@ -24,7 +24,7 @@ Database
 - **View** 是 DataSource 的展示方式。一个 View 通过 `dataSourceUrl` 指向一个 DataSource——可以是本 Database 拥有的，也可以是外部 Database 的（linked database 场景）。
 - **Property** 是 DataSource 的列定义。每个 property 有 type（决定值格式）和 name（显示名）。
 - **CREATE-\* 占位符**：在同一个 `createDatabase` 调用中，新建的 DataSource、Property、View 还没有真实 URL，用 `CREATE-*` 作临时 key 互相引用。系统在创建完成后替换为 compressed URL。
-- **compressed URL**：所有已存在实体的唯一标识，格式如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`。前缀语义匹配实体类型（`page-`、`data-source-`、`database-`、`view-`、`property-`、`user-`、`agent-`、`teamspace-`）。API 调用中引用已有实体必须用 compressed URL，不可用 name。
+- **compressed URL**：所有已存在实体的唯一标识，格式如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"dataSourceUrl"`、`"okrs"`。前缀语义匹配实体类型（`page-`、`data-source-`、`database-`、`view-`、`property-`、`user-`、`agent-`、`teamspace-`）。API 调用中引用已有实体必须用 compressed URL，不可用 name。
 
 ### 本章能力边界速查
 
@@ -132,7 +132,7 @@ await connections.notion.createDatabase({
 
 - ⚠️ **key 不是 name**：`schema` 的 key 必须是 `CREATE-*` 或 compressed URL，不能用 property 的 display name。写 `"Title": { type: "title", name: "Title" }` 会失败，必须写 `"CREATE-title": { type: "title", name: "Title" }`。
 - ⚠️ **DataSource url 必须与 key 一致**：`dataSources` 的 key 是 `"CREATE-main"`，则该 DataSource 的 `url` 字段也必须是 `"CREATE-main"`。
-- ⚠️ **View 的 dataSourceUrl 必须引用存在的 key**：可以是同一调用中的 `CREATE-*` key，也可以是已有的 compressed URL 如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`。
+- ⚠️ **View 的 dataSourceUrl 必须引用存在的 key**：可以是同一调用中的 `CREATE-*` key，也可以是已有的 compressed URL 如 `"URL"`。
 - ⚠️ **parent 为 page 时**：数据库会追加到该 page 内容的底部。如需调整位置，后续用 page 编辑工具重排。
 
 ### 深钻指针
@@ -803,20 +803,20 @@ const result = await connections.search.search({
 
 ### 搜索结果与 Citations
 
-搜索结果中每个 result 包含 `id`、`type`、`title`、`snippet`、`url` 等字段。在 chat 回复中使用搜索结果的信息时，必须用 inline citation 引用对应结果的 compressed URL：
+搜索结果中每个 result 包含 `id`、`type`、`title`、`snippet`、`url` 等字段。在 chat 回复中使用搜索结果的信息时，必须用 inline citation 引用对应结果的 URL：
 
 ```
-根据内部文档，Q3 目标已更新。[^agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40]
+根据内部文档，Q3 目标已更新。[^https://www.notion.so/10cddb20e938409cab654fb624fd7ac3]
 ```
 
-citation 只能引用结果中的 `url` 字段（compressed URL 或 web URL），不能引用搜索工具调用本身的 URL。
+citation 只能引用结果中的 `url` 字段（compressed URL 或 web URL），不能引用搜索工具调用本身的 URL（如 `tool-xxx`）。
 
 ### 踩坑清单
 
 - ⚠️ **lookback 必须用规范格式**：`"7d"` / `"2w"` / `"3m"` / `"1y"` / `"all_time"` / ISO 日期。不接受 `"last week"` 等自然语言。
 - ⚠️ **keywords 要精炼**：2-4 个关键词，不要把整个 question 复制进来。
 - ⚠️ **"search Notion" = 搜 workspace 内容**：不是搜 Notion 帮助文档。搜帮助文档要设 `includeNotionHelpdocs: true`。
-- ⚠️ **citation 引用 result URL，不引用工具调用 URL**：`[^agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40]` ❌ → `[^agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40]` ✅。
+- ⚠️ **citation 引用 result URL，不引用工具调用 URL**。
 - ⚠️ **对于模糊的时间表述**："recent" / "latest" → 先用 `"1w"`，无结果再扩到 `"1m"` → `"all_time"`。
 
 ### 深钻指针
