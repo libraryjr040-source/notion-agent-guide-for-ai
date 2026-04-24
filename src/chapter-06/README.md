@@ -57,7 +57,7 @@
   "command": "set",
   "path": ["integrations", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "permissions"],
   "value": [
-    { "identifier": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "actions": ["edit"] },
+    { "identifier": "dataSourceUrl", "actions": ["edit"] },
     { "identifier": "*", "actions": ["view"] }
     // ... 保留原有权限项
   ]
@@ -140,7 +140,7 @@
 
 ```jsonc
 {
-  "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  "url": "okrs",
   "propertyUpdates": {
     "date:Due Date:start": "2025-01-15",
     "date:Due Date:end": null,
@@ -170,7 +170,7 @@
 
 ```jsonc
 {
-  "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  "url": "teams",
   "propertyUpdates": {
     "place:Location:address": "1600 Pennsylvania Ave NW, Washington, DC 20500"
   }
@@ -201,13 +201,13 @@
 - **SQL 查询**中过滤 checkbox：
 
 ```sql
-SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" WHERE "Is Active" = '__YES__'
+SELECT url FROM "dataSourceUrl" WHERE "Is Active" = '__YES__'
 ```
 
 - **propertyUpdates** 中设置 checkbox：
 
 ```jsonc
-{ "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "propertyUpdates": { "Is Active": true } }
+{ "url": "URL", "propertyUpdates": { "Is Active": true } }
 ```
 
 **预防策略**：
@@ -229,7 +229,7 @@ SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe
 - SQL 中解析数组值用 `json_each`：
 
 ```sql
-SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" t
+SELECT url FROM "okrs" t
 WHERE EXISTS (
   SELECT 1 FROM json_each(t."Tags") WHERE value = 'Important'
 )
@@ -239,7 +239,7 @@ WHERE EXISTS (
 
 ```sql
 SELECT url, json_extract("Project", '$') AS project_url
-FROM "dataSourceUrl"
+FROM "teams"
 ```
 
 - propertyUpdates 写入：
@@ -249,10 +249,10 @@ FROM "dataSourceUrl"
 { "Tags": ["Important", "Urgent"] }
 
 // relation (limit=1): 单值字符串
-{ "Project": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
+{ "Project": "example.com" }
 
 // relation (无 limit): 数组
-{ "Related Tasks": ["dataSourceUrl", "okrs"] }
+{ "Related Tasks": ["OPTIONAL_NOTICE", "connector-*-1"] }
 
 // person (limit=1): 单值字符串
 { "Owner": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
@@ -456,7 +456,7 @@ FROM "dataSourceUrl"
 
 ### 6.5.1 Wiki parent 错误
 
-**典型症状**：在 wiki 数据库中创建页面时，使用 `{ type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }` 作为 parent，页面创建失败或位置不正确。
+**典型症状**：在 wiki 数据库中创建页面时，使用 `{ type: "dataSource", url: "URL" }` 作为 parent，页面创建失败或位置不正确。
 
 **根因分析**：Wiki 数据库（`isWiki: true`）的页面创建必须使用 `{ type: "page", url: wikiPageUrl }` 作为 parent，而不是 dataSource parent。`wikiPageUrl` 是 wiki 的 collection view page，从 `loadDatabase` 的返回值中获取。
 
@@ -464,13 +464,13 @@ FROM "dataSourceUrl"
 
 ```jsonc
 // 1. 先 loadDatabase 获取 wiki 信息
-const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const db = await loadDatabase({ url: "dataSourceUrl" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "dataSourceUrl"
+// db.configuration.wikiPageUrl === "https://www.notion.so/7fd3f523da6944cd8119bcfeb2d8df72"
 
 // 2. 用 wikiPageUrl 作为 parent
 await createPage({
-  parent: { type: "page", url: "dataSourceUrl" },  // wikiPageUrl
+  parent: { type: "page", url: "https://www.notion.so/7fd3f523da6944cd8119bcfeb2d8df72" },  // wikiPageUrl
   properties: { title: "新 Wiki 页面" }
 })
 ```
@@ -497,13 +497,13 @@ await createPage({
 // 创建 linked database
 await createDatabase({
   name: "Tasks View",
-  parent: { type: "page", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },
+  parent: { type: "page", url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9" },
   dataSources: {},  // linked database 不拥有 data source
   views: {
     "CREATE-view": {
       type: "table",
       name: "All Tasks",
-      dataSourceUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"  // 引用外部 data source
+      dataSourceUrl: "example.com"  // 引用外部 data source
     }
   }
 })
@@ -614,7 +614,7 @@ await search({
 
 ### 6.7.1 createAndRunThread 被拒（无 interact 权限）
 
-**典型症状**：调用 `createAndRunThread({ agentUrl: "dataSourceUrl" })` 时被拒绝。
+**典型症状**：调用 `createAndRunThread({ agentUrl: "okrs" })` 时被拒绝。
 
 **根因分析**：Custom Agent 向另一个 Custom Agent 发消息需要 interact 权限。该权限在调用方的 Notion integration 中声明，而非目标方。
 
@@ -830,15 +830,15 @@ await runTool({
 **低效模式**：
 ```jsonc
 // ❌ 逐条删除
-await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"] })
-await deletePages({ pageUrls: ["dataSourceUrl"] })
-await deletePages({ pageUrls: ["okrs"] })
+await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75"] })
+await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e"] })
+await deletePages({ pageUrls: ["https://www.notion.so/33ec9fa44e9780138c89f8c2f905d804"] })
 ```
 
 **优化方案**：
 ```jsonc
 // ✅ 批量删除
-await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl", "okrs"] })
+await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75", "agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e", "https://www.notion.so/33ec9fa44e9780138c89f8c2f905d804"] })
 ```
 
 **同理适用于**：
@@ -855,9 +855,9 @@ await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698
 **低效模式**：
 ```jsonc
 // ❌ 串行加载无依赖的资源
-const page1 = await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
-const page2 = await loadPage({ url: "dataSourceUrl" })
-const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const page1 = await loadPage({ url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/mcpServer/e79d39d7-a57c-40ec-9ded-60470b1fc2a9" })
+const page2 = await loadPage({ url: "trigger://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/2821c2ba-e01a-4213-9082-ad754ec83a09" })
+const db = await loadDatabase({ url: "okrs" })
 ```
 
 **优化方案**：
@@ -882,18 +882,18 @@ const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae6
 **低效模式**：
 ```jsonc
 // ❌ 每次更新前都重新加载
-await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
-await updatePage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", propertyUpdates: { Status: "In progress" } })
-await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })  // 不必要的重复加载
-await updatePage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", contentUpdates: [{ oldStr: "...", newStr: "..." }] })
+await loadPage({ url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4" })
+await updatePage({ url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4", propertyUpdates: { Status: "In progress" } })
+await loadPage({ url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4" })  // 不必要的重复加载
+await updatePage({ url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4", contentUpdates: [{ oldStr: "...", newStr: "..." }] })
 ```
 
 **优化方案**：
 ```jsonc
 // ✅ 加载一次，合并多个更新到一次调用
-await loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+await loadPage({ url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4" })
 await updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "https://www.notion.so/766e5b1dbb794308a6133ebc00b307b4",
   propertyUpdates: { Status: "In progress" },
   contentUpdates: [{ oldStr: "...", newStr: "..." }]
 })
