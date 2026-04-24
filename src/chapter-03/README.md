@@ -24,7 +24,7 @@ Database
 - **View** 是 DataSource 的展示方式。一个 View 通过 `dataSourceUrl` 指向一个 DataSource——可以是本 Database 拥有的，也可以是外部 Database 的（linked database 场景）。
 - **Property** 是 DataSource 的列定义。每个 property 有 type（决定值格式）和 name（显示名）。
 - **CREATE-\* 占位符**：在同一个 `createDatabase` 调用中，新建的 DataSource、Property、View 还没有真实 URL，用 `CREATE-*` 作临时 key 互相引用。系统在创建完成后替换为 compressed URL。
-- **compressed URL**：所有已存在实体的唯一标识，格式如 `"page-1"`（page）、`"data-source-1"`（data source）、`"view-1"`（view）。前缀语义匹配实体类型（`page-`、`data-source-`、`database-`、`view-`、`property-`、`user-`、`agent-`、`teamspace-`）。API 调用中引用已有实体必须用 compressed URL，不可用 name。
+- **compressed URL**：所有已存在实体的唯一标识，格式如 `"page-1"`（page）、`"data-source-1"`（data source）、`"view-1"`（view）。前缀语义匹配实体类型（`page-`、`data-source-`、`database-`、`view-`、`property-`、`user-`、`agent-`、`teamspace-`、`integration-`、`file-`）。API 调用中引用已有实体必须用 compressed URL，不可用 name。
 
 ### 本章能力边界速查
 
@@ -158,9 +158,9 @@ await connections.notion.createDatabase({
 |------|----------|------|
 | 页面标题（必须有且仅一个） | `title` | 每个 DataSource 必须有一个 title property |
 | 自由文本 | `text` | 支持 rich text |
-| 单选标签 | `select` | 需预定义 options，结构详见 `dataSourceTypes.ts` |
+| 单选标签 | `select` | 需预定义 options，完整结构 → `dataSourceTypes.ts` |
 | 多选标签 | `multi_select` | 需预定义 options |
-| 工作流状态 | `status` | 分三组（to_do / in_progress / complete），结构详见 `dataSourceTypes.ts` |
+| 工作流状态 | `status` | 分 to_do / in_progress / complete 三组，完整结构 → `dataSourceTypes.ts` |
 | 数值 | `number` | 可配 number_format 和 show_as |
 | 日期/时间 | `date` | 可配 date_format、time_format |
 | 人员 | `person` | `limit: 1` 限制单人 |
@@ -169,7 +169,7 @@ await connections.notion.createDatabase({
 | 文件附件 | `file` | — |
 | URL / Email / Phone | `url` / `email` / `phone_number` | — |
 | 公式计算 | `formula` | 需写 formula 表达式，详见 `formula-spec.md` |
-| 汇总关联数据 | `rollup` | 需指定 relationPropertyUrl + targetPropertyUrl + aggregation |
+| 汇总关联数据 | `rollup` | 需指定 relationPropertyUrl + targetPropertyUrl + aggregation，完整配置 → `dataSourceTypes.ts` |
 | 自增 ID | `auto_increment_id` | 只读 |
 | 创建/编辑时间 | `created_time` / `last_edited_time` | 只读 |
 | 创建/编辑人 | `created_by` / `last_edited_by` | 只读 |
@@ -183,8 +183,8 @@ await connections.notion.createDatabase({
 "CREATE-project": {
   type: "relation",
   name: "Project",
-  dataSourceUrl: "data-source-1",  // 目标数据源的 compressed URL
-  limit: 1  // 可选，限制只关联一条
+  dataSourceUrl: "data-source-1",
+  limit: 1
 }
 ```
 
@@ -211,13 +211,13 @@ formula 表达式写在 `formula` 字段中，`resultType` 标注计算结果类
 "CREATE-task-count": {
   type: "rollup",
   name: "Task Count",
-  relationPropertyUrl: "property-1",  // 本数据源上的 relation property
-  targetPropertyUrl: "property-2",    // 目标数据源上要聚合的 property
+  relationPropertyUrl: "property-1",
+  targetPropertyUrl: "property-2",
   aggregation: "count"
 }
 ```
 
-Rollup 支持多种 aggregation 模式及 status group 对象。完整列表 → `dataSourceTypes.ts`。
+完整 aggregation 选项与配置 → `dataSourceTypes.ts`。
 
 ### 踩坑清单
 
@@ -230,7 +230,7 @@ Rollup 支持多种 aggregation 模式及 status group 对象。完整列表 →
 
 ### 深钻指针
 
-- 所有 property 类型完整定义（含 select options 结构、status groups 结构、rollup aggregation 完整列表） → `modules/notion/databases/dataSourceTypes.ts`
+- 所有 property 类型完整定义 → `modules/notion/databases/dataSourceTypes.ts`
 - Formula 语言完整规范 → `modules/notion/databases/formula-spec.md`
 - Property 值在 SQL 中的表现 → `modules/notion/databases/data-source-sqlite-tables.md`
 
@@ -262,7 +262,7 @@ Rollup 支持多种 aggregation 模式及 status group 对象。完整列表 →
 
 ### 通用 View 配置
 
-所有 view 类型（chart 和 dashboard 除外）都支持 `displayProperties`、`simpleFilters`、`advancedFilter`、`sorts`、`groupBy`。不同 property 类型的 groupBy 需要不同配置结构（如 `GroupByNumber`、`GroupByStatus` 等）——完整的 property 类型 → GroupBy 配置对照表 → `viewTypes.ts`。
+所有 view 类型（chart 和 dashboard 除外）都支持 `displayProperties`、`simpleFilters`、`advancedFilter`、`sorts`、`groupBy`。不同 property 类型的 groupBy 需要不同配置结构——完整对照表 → `viewTypes.ts`。
 
 ### Chart View 配置
 
@@ -405,7 +405,7 @@ advancedFilter: {
 
 ### 深钻指针
 
-- 所有 View 类型定义 + Filter / GroupBy / Sort / Chart + 各 property 类型对应的 GroupBy 配置结构（含 `GroupByNumber` 等） → `modules/notion/databases/viewTypes.ts`
+- 所有 View 类型定义 + Filter / GroupBy / Sort / Chart 完整配置 → `modules/notion/databases/viewTypes.ts`
 - Layout（页面内打开条目时的布局） → `modules/notion/databases/layoutTypes.ts`
 
 ---
@@ -506,12 +506,10 @@ const result = await connections.notion.querySql({
 ### 踩坑清单
 
 - ⚠️ **表名必须双引号包裹**：`FROM "data-source-1"` ✅，`FROM data-source-1` ❌。
-- ⚠️ **checkbox 值不是 true/false**：是 `"__YES__"` 和 `"__NO__"`。
-- ⚠️ **date 列不叫原名**：`"Due Date"` 展开成 `"date:Due Date:start"`、`"date:Due Date:end"`、`"date:Due Date:is_datetime"`。直接查 `"Due Date"` 会找不到列。
-- ⚠️ **place 列同理**：展开成 5 个 `"place:<Name>:*"` 列（address / name / latitude / longitude / google_place_id）。
+- ⚠️ **特殊列名与值编码**：checkbox、date、place 等类型有特殊的列名映射和值编码规则（如 date 展开为 `date:<Name>:start` 等 3 列，place 展开为 5 列，checkbox 用 `"__YES__"` / `"__NO__"` 而非 true/false）。完整映射 → `data-source-sqlite-tables.md`。
 - ⚠️ **multi-select / relation / person 是 JSON 字符串**：不能直接 `= 'value'`，要用 `json_each` 解包。
-- ⚠️ **与系统列名冲突的 property**：如果用户定义了名为 `url` 或 `createdTime` 的 property，SQL 中要用 `"userDefined:url"` 前缀。
-- ⚠️ **返回结果**：`querySql` 返回 `{ rows: Array<Record<string, value>>, hasMore: boolean }`。如果 `hasMore` 为 true，需加 `LIMIT` + `OFFSET` 分页。
+- ⚠️ **与系统列名冲突的 property**：用 `"userDefined:"` 前缀区分，详见 `data-source-sqlite-tables.md`。
+- ⚠️ **返回结果**：`querySql` 返回 `{ rows, hasMore }`。如果 `hasMore` 为 true，需加 `LIMIT` + `OFFSET` 分页。
 
 ### 深钻指针
 
@@ -634,7 +632,7 @@ await connections.notion.updateDatabase({
         { name: "P0", color: "red" },
         { name: "P1", color: "orange" },
         { name: "P2", color: "blue" },
-        { name: "P3", color: "gray" }  // 新增选项
+        { name: "P3", color: "gray" }
       ] }
   ]
 })
