@@ -1,7 +1,1 @@
-ALPHA url: "https://www.notion.so/7fd3f523da6944cd8119bcfeb2d8df72"
-BRAVO url: "user://332d872b-594c-816c-a9a9-000276e2496b"
-CHARLIE url: "view://233e69ca-33fe-44b4-96f4-d38fc7f6e1a5"
-DELTA url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
-ECHO url: "agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e"
-FOXTROT url: "thread://755c9fa4-4e97-8185-a342-00033edae600/09d6d118-8d90-4e91-adcf-5a54359b3e2f"
-GOLF url: "https://www.notion.so/agent/698ee8ffa78849feb2f4608ee81dfc40?wfv=activity&at=5a45f9a1e1314bfaacc4460f09a29f8e"
+This file is no longer needed.
