@@ -162,13 +162,13 @@ Phase 2 — 逐章写作
 
 ```typescript
 // 1. 读取执行手册
-const handbook = await connections.notion.loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const handbook = await connections.notion.loadPage({ url: "https://www.notion.so/9f4ebc893d2a4febbec60b54fcd435b9" })
 // 2. 解析当前状态（从 content 中提取）
 // 3. 决定下一步行动
 // 4. 执行行动
 // 5. 更新执行手册
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "https://www.notion.so/9f4ebc893d2a4febbec60b54fcd435b9",
   contentUpdates: [{
     oldStr: "| Ch5 | 🔵 写作中 | — | 著作郎已派写 |",
     newStr: "| Ch5 | 🟡 审阅中 | def5678 | draft v1 已提交 |",
@@ -280,7 +280,7 @@ const result = connections.system.wait({
 
 ```typescript
 await connections.notion.createAndRunThread({
-  agentUrl: "dataSourceUrl",  // 校勘官
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75",  // 校勘官
   instructions: `# 派审指令
 
 ## 审阅对象
@@ -378,7 +378,7 @@ const writeTask = connections.notion.createAndRunThread({
   instructions: "写 Ch5 draft...",
 })
 const researchTask = connections.notion.createAndRunThread({
-  agentUrl: "okrs",  // 调研员
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75",  // 调研员
   instructions: "调查 thread 续写的 context 保留机制...",
 })
 
@@ -467,7 +467,7 @@ commit + 返回：commit hash + 字数 + 新术语`,
 
 ```typescript
 const { response: reviewReport } = await connections.notion.createAndRunThread({
-  agentUrl: "dataSourceUrl",  // 校勘官
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75",  // 校勘官
   instructions: `# 派审指令：Ch5
 
 ## 审阅对象
@@ -602,7 +602,7 @@ await connections.notion.sendNotification({
 ```typescript
 // 将进度持久化
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "https://www.notion.so/9f4ebc893d2a4febbec60b54fcd435b9",
   contentUpdates: [{
     oldStr: "| Ch5 | 🔵 写作中",
     newStr: "| Ch5 | ⚠️ 配额耗尽，需在新 session 继续",
