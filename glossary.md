@@ -21,3 +21,7 @@
 | 桥梁文件 | 用摘要文件替代全文传递的 context 管理策略（如 BOOK_SUMMARY.md） | Ch4 S4.10 |
 | CREATE-\* 占位符 | 同一次 API 调用中标识新建实体的临时 key，系统替换为真实 URL | Ch4 薄概念层 |
 | compressed URL | 系统分配的实体标识符，格式为 `prefix-id`，是所有 API 调用中引用实体的标准方式 | Ch4 薄概念层 |
+| Phase | 多 Agent 协作中的宏观执行阶段，在执行手册中追踪 | Ch5 S5.7 |
+| 通信协议 | Agent 间通过 instructions 字符串传递结构化信息的约定格式 | Ch5 S5.8 |
+| 指令自包含原则 | 派发给 sub-agent 的 instructions 必须包含完成任务所需的全部信息，不依赖外部上下文 | Ch5 S5.3 |
+| SHA | Git commit 的唯一哈希标识，用于 GitHub MCP 的文件更新操作中防止冲突 | Ch5 S5.9 |
