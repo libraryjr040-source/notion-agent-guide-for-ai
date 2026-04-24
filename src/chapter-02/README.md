@@ -57,10 +57,10 @@ Page
 #### 路径 A：从零创建普通页面
 
 1. 确定 parent：
-   - 顶层私有页面 → `{ type: "user", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }`（传当前用户的 URL）
+   - 顶层私有页面 → `{ type: "user", url: "teams" }`（传当前用户的 URL）
    - 子页面 → `{ type: "page", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }`
    - 数据库内 → `{ type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }`
-   - teamspace 顶层 → `{ type: "teamspace", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }`
+   - teamspace 顶层 → `{ type: "teamspace", url: "teams" }`
 2. 调用 `connections.notion.createPage`，传入 parent、properties、content、icon
 3. 设置 title 和 icon（创建时就设，不要事后补）
 
@@ -96,7 +96,7 @@ await connections.notion.createPage({
 
 ```ts
 // 先加载数据库确认 wiki 状态
-const db = await connections.notion.loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const db = await connections.notion.loadDatabase({ url: "okrs" })
 // db.configuration.isWiki === true
 // db.configuration.wikiPageUrl === "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
 
@@ -224,9 +224,9 @@ await connections.notion.updatePage({
     Points: 8,
     "Is Urgent": true,
     Tags: ["Bug", "P0"],
-    Assignee: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
-    Reviewers: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"],
-    "Related Tasks": ["dataSourceUrl", "okrs"],
+    Assignee: "teams",
+    Reviewers: ["teams", "URL"],
+    "Related Tasks": ["dataSourceUrl", "dataSourceUrl"],
   }
 })
 ```
@@ -285,9 +285,9 @@ await connections.notion.updatePage({
 
 // 无 limit 的 relation → 页面 URL 数组
 await connections.notion.updatePage({
-  url: "okrs",
+  url: "dataSourceUrl",
   propertyUpdates: {
-    "Sub-tasks": ["teams", "URL", "example.com"]  // 多选
+    "Sub-tasks": ["okrs", "teams", "URL"]  // 多选
   }
 })
 ```
@@ -342,14 +342,14 @@ await connections.notion.updatePage({
 
 // 移到数据源中
 await connections.notion.updatePage({
-  url: "okrs",
+  url: "dataSourceUrl",
   parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 })
 
 // 移到 teamspace 顶层
 await connections.notion.updatePage({
-  url: "teams",
-  parent: { type: "teamspace", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
+  url: "okrs",
+  parent: { type: "teamspace", url: "teams" }
 })
 ```
 
@@ -543,13 +543,13 @@ await connections.notion.createPage({
 通过 `updateDatabase` 的 edits 修改 data source 的 `default_page_template` 字段。该字段的值是模板页面的 compressed URL，必须是已存在于该 data source `page_templates` 列表中的模板。
 
 ```ts
-// 假设 loadDatabase 返回的 data source 中已有模板 agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40
+// 假设 loadDatabase 返回的 data source 中已有模板 dataSourceUrl
 await connections.notion.updateDatabase({
-  databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  databaseUrl: "okrs",
   edits: [{
     command: "set",
     path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
-    value: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
+    value: "dataSourceUrl"
   }]
 })
 ```
@@ -558,7 +558,7 @@ await connections.notion.updateDatabase({
 
 ```ts
 await connections.notion.updateDatabase({
-  databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  databaseUrl: "okrs",
   edits: [{
     command: "set",
     path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
@@ -618,7 +618,7 @@ await connections.notion.updatePermission({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   item: {
     type: "user",
-    userUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+    userUrl: "teams",
     accessLevel: "can_edit"
   }
 })
@@ -659,7 +659,7 @@ await connections.notion.updatePermission({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   item: {
     type: "user",
-    userUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+    userUrl: "teams",
     accessLevel: "no_access"
   }
 })
@@ -738,7 +738,7 @@ await connections.notion.updatePage({
 
 ```ts
 await connections.notion.archivePages({
-  pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl", "okrs"]
+  pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl", "dataSourceUrl"]
 })
 ```
 
@@ -787,7 +787,7 @@ await connections.notion.deletePages({
 `viewFileUrl` 用于获取 Notion 内部文件的可访问 URL（例如上传到 Notion 的附件）。调用后文件会自动附加到当前对话的 transcript 中。
 
 ```ts
-const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const result = await connections.notion.viewFileUrl({ url: "URL" })
 // result.url → 可访问的文件 URL
 ```
 
@@ -796,7 +796,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 在 Notion-flavored Markdown 中使用以下语法：
 
 ```markdown
-![图片描述](agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40)
+![图片描述](URL)
 
 <video src="dataSourceUrl">视频标题</video>
 
@@ -804,7 +804,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 
 <audio src="teams">音频文件</audio>
 
-<file src="URL">附件</file>
+<file src="OPTIONAL_NOTICE">附件</file>
 ```
 
 图片也可以使用完整 URL：
@@ -815,7 +815,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 
 ### 踩坑清单
 
-- ⚠️ **src 中的 URL 格式**：`src` 属性可以接受 compressed URL（如 `src="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`）或完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**用双花括号包裹完整 URL（如 `src="https://example.com"`），这会导致解析失败。
+- ⚠️ **src 中的 URL 格式**：`src` 属性可以接受 compressed URL（如 `src="URL"`）或完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**用双花括号包裹完整 URL（如 `src="https://example.com"`），这会导致解析失败。
 - ⚠️ **图片用 Markdown 语法**：图片使用 `![描述](URL)` 格式，不用 `<img>` 标签。
 
 ### 深钻指针
@@ -845,7 +845,7 @@ const discussions = await connections.notion.getPageDiscussions({
 
 ```ts
 await connections.notion.addCommentToDiscussion({
-  discussionUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 从 getPageDiscussions 返回的讨论 URL
+  discussionUrl: "dataSourceUrl",  // 从 getPageDiscussions 返回的讨论 URL
   text: "已修复，请查看最新版本。"
 })
 ```
@@ -867,9 +867,9 @@ await connections.notion.addCommentToDiscussion({
 
 ```ts
 await connections.notion.addCommentToDiscussion({
-  discussionUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  discussionUrl: "dataSourceUrl",
   text: "请查看附件中的截图。",
-  attachedFileIds: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"]
+  attachedFileIds: ["okrs", "teams"]
 })
 ```
 
