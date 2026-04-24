@@ -82,7 +82,7 @@ await connections.notion.createPage({
 ```ts
 await connections.notion.createPage({
   parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },
-  pageTemplate: "https://www.notion.so/34cc9fa44e9780e4b799e73d9978821b",  // 模板页面的 compressed URL
+  pageTemplate: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9",  // 模板页面的 compressed URL
   properties: { Title: "从模板创建的任务" }
 })
 ```
@@ -98,10 +98,10 @@ await connections.notion.createPage({
 // 先加载数据库确认 wiki 状态
 const db = await connections.notion.loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "200"
+// db.configuration.wikiPageUrl === "user://332d872b-594c-816c-a9a9-000276e2496b"
 
 await connections.notion.createPage({
-  parent: { type: "page", url: "200" },  // wikiPageUrl，不是 dataSource URL
+  parent: { type: "page", url: "user://332d872b-594c-816c-a9a9-000276e2496b" },  // wikiPageUrl，不是 dataSource URL
   properties: { title: "Wiki 新条目" },
   content: "这是一个 wiki 页面。"
 })
@@ -211,42 +211,42 @@ await connections.notion.updatePage({
 2. **改属性**：`updatePage` 的 `propertyUpdates` 参数（注意不是 `properties`——`properties` 只用于 `createPage`）
 3. **确认 schema**：如果页面在 dataSource 中，先 `loadDatabase` 或 `loadDataSource` 确认属性名和类型
 
+属性值的完整格式规范（各类型的值应该怎么传）请深钻 → `modules/notion/pages/AGENTS.md` → Property value formats 小节。以下只展示跨 module 组合流程和踩坑点。
+
 ### 常规属性更新
 
 ```ts
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
-    Title: "新标题",                    // title / text → 字符串
-    Status: "In progress",              // status → 选项名字符串
-    Points: 8,                          // number → 数字
-    "Is Urgent": true,                  // checkbox → boolean
-    Tags: ["Bug", "P0"],                // multi-select → 字符串数组
-    Assignee: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",             // person（limit 1）→ 用户 compressed URL
-    Reviewers: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"],  // person（多选）→ 用户 URL 数组
-    "Related Tasks": ["integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9", "agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75"],  // relation → 页面 URL 数组
+    Title: "新标题",
+    Status: "In progress",
+    Points: 8,
+    "Is Urgent": true,
+    Tags: ["Bug", "P0"],
+    Assignee: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+    Reviewers: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"],
+    "Related Tasks": ["dataSourceUrl", "okrs"],
   }
 })
 ```
 
 ### 特殊属性：Date 展开
 
-Date 属性在 API 中展开为三个键：
+Date 属性在 API 中展开为三个键——这是最容易出错的属性类型：
 
 ```ts
+// 单日期
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
     "date:Due Date:start": "2025-07-15",
-    "date:Due Date:end": null,           // 单日期时设为 null
-    "date:Due Date:is_datetime": 0       // 0 = 纯日期，1 = 日期时间
+    "date:Due Date:end": null,
+    "date:Due Date:is_datetime": 0
   }
 })
-```
 
-日期范围示例：
-
-```ts
+// 日期范围
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
@@ -266,7 +266,6 @@ await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
     "place:Location:address": "1600 Pennsylvania Ave NW, Washington, DC 20500"
-    // 其余字段（name, latitude, longitude, google_place_id）可省略，系统会 geocoding 补全
   }
 })
 ```
@@ -280,7 +279,7 @@ await connections.notion.updatePage({
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
-    "Parent Task": "user://332d872b-594c-816c-a9a9-000276e2496b"  // limit 1
+    "Parent Task": "URL"  // limit 1
   }
 })
 
@@ -288,7 +287,7 @@ await connections.notion.updatePage({
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
-    "Sub-tasks": ["user://34cc9fa4-4e97-8194-b96b-0027cef5b078", "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c", "https://www.notion.so/33ec9fa44e97803cbc8ee59962af9534"]  // 多选
+    "Sub-tasks": ["example.com", "OPTIONAL_NOTICE", "connector-*-1"]  // 多选
   }
 })
 ```
@@ -301,7 +300,7 @@ await connections.notion.updatePage({
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   propertyUpdates: {
-    Status: null,             // 清除 status
+    Status: null,
     "date:Due Date:start": null,
     "date:Due Date:end": null,
     "date:Due Date:is_datetime": null
@@ -319,7 +318,7 @@ await connections.notion.updatePage({
 
 ### 深钻指针
 
-- `modules/notion/pages/AGENTS.md` → Properties 小节 + Property value formats
+- `modules/notion/pages/AGENTS.md` → Properties 小节 + Property value formats（各属性类型的完整值格式）
 - `modules/notion/pages/index.ts` → `CreatePage`、`UpdatePage` 类型签名
 - `modules/notion/databases/data-source-sqlite-tables.md` → 属性类型与 SQL 列映射（对照参考）
 
@@ -338,13 +337,13 @@ await connections.notion.updatePage({
 // 移到另一个页面下
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
-  parent: { type: "page", url: "https://www.notion.so/dccfd9a988594546b2194d81a7207ecd" }
+  parent: { type: "page", url: "dataSourceUrl" }
 })
 
 // 移到数据源中
 await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
-  parent: { type: "dataSource", url: "dataSourceUrl" }
+  parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 })
 
 // 移到 teamspace 顶层
@@ -378,6 +377,8 @@ await connections.notion.updatePage({
 - 高级 block 类型使用 XML 风格标签
 - **缩进用 tab**，不用空格
 - 特殊字符需转义：`\ * ~ \` $ [ ] < > { } | ^`（代码块内不转义）
+
+完整的 block 类型清单、rich text 语法、颜色系统、mention 格式等请深钻 → `modules/notion/notion-markdown.md`。以下只展示实战组合案例和踩坑点——这些是 module files 里没有的。
 
 ### 实战案例：Toggle
 
@@ -487,22 +488,6 @@ await connections.notion.updatePage({
 </details>
 ```
 
-### 其他常用高级 block
-
-| Block 类型 | 语法 | 注意事项 |
-|-----------|------|----------|
-| 空行 | `<empty-block/>` | 必须独占一行；普通空行会被 strip |
-| 分割线 | `---` | 也用作 Presentation Mode 的幻灯片分隔 |
-| 数学公式（行内） | `$E = mc^2$` | `$` 前后需要空白；`$` 内侧不能有空白 |
-| 数学公式（块级） | `$$\nE = mc^2\n$$` | 独占一行 |
-| Mention 用户 | `<mention-user url="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"/>` | URL 必须指向已有用户 |
-| Mention 页面 | `<mention-page url="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"/>` | 内联引用，不会移动页面 |
-| Mention 日期 | `<mention-date start="2025-07-15"/>` | 可带 end、startTime、timeZone |
-| 子页面 | `<page url="dataSourceUrl">标题</page>` | ⚠️ 删除此标签会从当前页面移除该子页面 |
-| Synced block | `<synced_block>Children</synced_block>` | 新建时不传 url |
-| 图片 | `![描述](agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40)` | URL 可以是 compressed URL 或完整 URL |
-| 代码块 | ` ```language\ncode\n``` ` | 代码块内不要转义特殊字符 |
-
 ### 多行引用的正确写法
 
 ```markdown
@@ -527,7 +512,7 @@ await connections.notion.updatePage({
 
 ### 深钻指针
 
-- `modules/notion/notion-markdown.md` — 完整语法参考（block 类型、rich text、颜色、mention 等）
+- `modules/notion/notion-markdown.md` — 完整语法参考（全部 block 类型、rich text、颜色、mention、高级 block 等）
 - `modules/notion/pages/page-content-spec.md` — 页面内容撰写规范（创建 vs 修改的风格指导）
 
 ---
@@ -553,25 +538,57 @@ await connections.notion.createPage({
 })
 ```
 
+#### 设置默认模板
+
+通过 `updateDatabase` 的 edits 修改 data source 的 `default_page_template` 字段。该字段的值是模板页面的 compressed URL，必须是已存在于该 data source `page_templates` 列表中的模板。
+
+```ts
+// 假设 loadDatabase 返回的 data source 中已有模板 integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9
+await connections.notion.updateDatabase({
+  databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  edits: [{
+    command: "set",
+    path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
+    value: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9"
+  }]
+})
+```
+
+清除默认模板（不再自动使用模板创建新页面）：
+
+```ts
+await connections.notion.updateDatabase({
+  databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  edits: [{
+    command: "set",
+    path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
+    value: null
+  }]
+})
+```
+
 #### 删除模板
 
 调用 `deletePages`，传入模板页面的 URL。系统会自动从数据源的模板列表中移除，若是默认模板也会自动清除。
 
 ```ts
 await connections.notion.deletePages({
-  pageUrls: ["https://www.notion.so/34cc9fa44e978012ba0adb2681246790"]
+  pageUrls: ["integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9"]
 })
 ```
 
 ### 踩坑清单
 
 - ⚠️ **模板属性键名必须精确匹配**：模板的 properties 必须使用 data source schema 中的精确键名。触发条件：键名大小写不对。解法：先 `loadDatabase` 确认 schema。
+- ⚠️ **默认模板必须已存在**：`default_page_template` 的值必须是已通过 `createPage({ asTemplate: true })` 创建并存在于 `page_templates` 列表中的模板 URL。设置不存在的 URL 会失败。
 - ⚠️ **默认模板的使用**：如果 data source 已有 default template，创建新页面时应默认使用它（除非用户明确要求）。data source 上的 `default_page_template` 字段记录了默认模板 URL。
 
 ### 深钻指针
 
 - `modules/notion/pages/AGENTS.md` → Template pages 小节
 - `modules/notion/databases/AGENTS.md` → Templates 说明
+- `modules/notion/databases/dataSourceTypes.ts` → `DataSource` 类型（`default_page_template`、`page_templates` 字段定义）
+- `modules/notion/databases/index.ts` → `UpdateDatabase` 的 edits 模式
 
 ---
 
@@ -584,6 +601,8 @@ await connections.notion.deletePages({
 1. 调用 `loadPermissions` 查看当前权限列表
 2. 调用 `updatePermission` 设置或移除一个权限项
 3. 每次 `updatePermission` 只能操作一个权限项（一个 user / workspace / public）
+
+Access level 的完整定义（`full_access` / `can_edit` / `can_edit_content` / `can_comment` / `can_view` / `no_access` 各自的含义）请深钻 → `modules/notion/sharing.ts` → `SharingAccessLevel` 类型。
 
 #### 查看权限
 
@@ -612,7 +631,7 @@ await connections.notion.updatePermission({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   item: {
     type: "workspace",
-    accessLevel: "can_view"  // workspace 所有人可查看
+    accessLevel: "can_view"
   }
 })
 ```
@@ -641,21 +660,10 @@ await connections.notion.updatePermission({
   item: {
     type: "user",
     userUrl: "dataSourceUrl",
-    accessLevel: "no_access"  // 移除该用户的权限
+    accessLevel: "no_access"
   }
 })
 ```
-
-### Access Level 速查
-
-| accessLevel | 含义 |
-|-------------|------|
-| `full_access` | 可编辑内容、结构和分享设置 |
-| `can_edit` | 可编辑内容，不能改分享设置 |
-| `can_edit_content` | 可编辑数据库内容，不能改数据库结构或分享 |
-| `can_comment` | 只能评论/建议 |
-| `can_view` | 只读 |
-| `no_access` | 移除权限 |
 
 ### 踩坑清单
 
@@ -665,7 +673,7 @@ await connections.notion.updatePermission({
 
 ### 深钻指针
 
-- `modules/notion/sharing.ts` — `LoadPermissions`、`UpdatePermission` 类型签名和 `SharingAccessLevel` 定义
+- `modules/notion/sharing.ts` — `LoadPermissions`、`UpdatePermission` 类型签名、`SharingAccessLevel` 完整定义、`PermissionItem` 联合类型
 
 ---
 
@@ -693,7 +701,7 @@ await connections.notion.updatePage({
   url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   verification: {
     status: "verified",
-    expirationDays: 90  // 90 天后过期
+    expirationDays: 90
   }
 })
 ```
@@ -828,7 +836,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 ```ts
 const discussions = await connections.notion.getPageDiscussions({
   pageUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
-  includeResolved: false  // 是否包含已解决的讨论
+  includeResolved: false
 })
 // discussions → NotionDiscussion[]
 ```
@@ -853,6 +861,18 @@ await connections.notion.addCommentToDiscussion({
 })
 ```
 
+#### 附带文件的评论
+
+`addCommentToDiscussion` 支持可选参数 `attachedFileIds`，用于在评论中附加文件。传入文件 ID 的数组：
+
+```ts
+await connections.notion.addCommentToDiscussion({
+  discussionUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  text: "请查看附件中的截图。",
+  attachedFileIds: ["file-id-abc", "file-id-def"]
+})
+```
+
 ### 评论格式
 
 `text` 参数支持 **inline-only** Markdown：粗体、斜体、行内代码等。不支持 block 级元素（标题、列表、代码块等）。
@@ -861,10 +881,11 @@ await connections.notion.addCommentToDiscussion({
 
 - ⚠️ **text 只支持 inline Markdown**：评论文本不能包含标题、列表、代码块等 block 类型。只支持 bold、italic、code、link 等 inline 元素。触发条件：在评论中使用 `##` 或 `- ` 列表。解法：只使用 inline 格式化。
 - ⚠️ **discussionUrl 可以是页面 URL**：传页面 URL 时会创建页面级评论；传讨论 URL 时会在已有讨论中追加回复。
+- ⚠️ **attachedFileIds 是文件 ID 而非 URL**：传入的是文件 ID 数组，不是 compressed URL。确保使用正确的文件标识符。
 
 ### 深钻指针
 
-- `modules/notion/discussions.ts` → `GetPageDiscussions`、`AddCommentToDiscussion` 类型签名
+- `modules/notion/discussions.ts` → `GetPageDiscussions`、`AddCommentToDiscussion` 类型签名（含 `attachedFileIds` 参数）
 
 ---
 
@@ -945,8 +966,26 @@ await connections.notion.createPage({
 | `modules/notion/pages/page-content-spec.md` | 页面内容撰写规范：创建/修改风格、database block 规则、Presentation Mode |
 | `modules/notion/notion-markdown.md` | Notion-flavored Markdown 完整语法：所有 block 类型、rich text、颜色、mention、高级 block |
 | `modules/notion/sharing.ts` | 分享函数签名：LoadPermissions、UpdatePermission、SharingAccessLevel、PermissionItem |
-| `modules/notion/discussions.ts` | 讨论函数签名：GetPageDiscussions、AddCommentToDiscussion |
+| `modules/notion/discussions.ts` | 讨论函数签名：GetPageDiscussions、AddCommentToDiscussion（含 attachedFileIds） |
 | `modules/notion/index.ts` | Module 总入口：ViewFileUrl 等通用函数 |
 | `modules/notion/pages/notion-icons.md` | Notion Icon 列表（使用 Notion Icon 时查阅） |
 | `modules/notion/databases/AGENTS.md` | 数据库指南（Wiki databases、Templates 相关小节） |
+| `modules/notion/databases/dataSourceTypes.ts` | DataSource 类型定义（default_page_template、page_templates 字段） |
+| `modules/notion/databases/index.ts` | 数据库函数签名（UpdateDatabase 的 edits 模式） |
 | `modules/notion/databases/data-source-sqlite-tables.md` | 属性类型与 SQL 列映射（属性格式对照参考） |
+
+---
+
+## 本章新术语
+
+| 术语 | 定义 | 首次出现 |
+|------|------|----------|
+| contentUpdates | `updatePage` 中用于增量编辑页面正文的参数，支持 oldStr/newStr 局部替换和全量替换两种模式 | Ch2 S2.2 |
+| propertyUpdates | `updatePage` 中用于修改页面属性的参数，与 `createPage` 的 `properties` 参数名不同 | Ch2 S2.3 |
+| date 展开键 | Date 属性在 API 中拆分为三个键的命名格式：`date:<属性名>:start`、`date:<属性名>:end`、`date:<属性名>:is_datetime` | Ch2 S2.3 |
+| place 展开键 | Place/Location 属性在 API 中拆分为五个键的命名格式：`place:<属性名>:address` 等 | Ch2 S2.3 |
+| replaceAllMatches | contentUpdates 中的选项，设为 true 时对页面中所有匹配位置执行相同替换（find-and-replace 模式） | Ch2 S2.2 |
+| Presentation Mode | Notion 页面的幻灯片演示模式，用 `---` divider 分隔幻灯片，需 Plus 计划 | Ch2 S2.12 |
+| default_page_template | DataSource 上的字段，记录默认模板页面的 URL，新建页面时自动应用 | Ch2 S2.6 |
+| verification | 页面级内置属性，可标记为 verified（可选过期天数）或 none | Ch2 S2.8 |
+| attachedFileIds | `addCommentToDiscussion` 的可选参数，用于在评论中附加文件 | Ch2 S2.11 |
