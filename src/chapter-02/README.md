@@ -98,10 +98,10 @@ await connections.notion.createPage({
 // 先加载数据库确认 wiki 状态
 const db = await connections.notion.loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "dataSourceUrl"
+// db.configuration.wikiPageUrl === "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
 
 await connections.notion.createPage({
-  parent: { type: "page", url: "dataSourceUrl" },  // wikiPageUrl，不是 dataSource URL
+  parent: { type: "page", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },  // wikiPageUrl，不是 dataSource URL
   properties: { title: "Wiki 新条目" },
   content: "这是一个 wiki 页面。"
 })
@@ -248,7 +248,7 @@ await connections.notion.updatePage({
 
 // 日期范围
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "dataSourceUrl",
   propertyUpdates: {
     "date:Sprint:start": "2025-07-14",
     "date:Sprint:end": "2025-07-25",
@@ -342,13 +342,13 @@ await connections.notion.updatePage({
 
 // 移到数据源中
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "okrs",
   parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 })
 
 // 移到 teamspace 顶层
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "teams",
   parent: { type: "teamspace", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
 })
 ```
