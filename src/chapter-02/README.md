@@ -82,7 +82,7 @@ await connections.notion.createPage({
 ```ts
 await connections.notion.createPage({
   parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },
-  pageTemplate: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 模板页面的 compressed URL
+  pageTemplate: "dataSourceUrl",  // 模板页面的 compressed URL
   properties: { Title: "从模板创建的任务" }
 })
 ```
