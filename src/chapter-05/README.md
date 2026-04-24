@@ -14,7 +14,7 @@
 | 概念 | 一句话 | module files 指针 |
 |------|--------|-------------------|
 | Thread 生命周期 | 一次 `createAndRunThread` 调用从创建到返回的完整过程，包括续写 | `modules/notion/threads/index.ts` → `CreateAndRunThread` |
-| 调用预算 | 单个 parent thread 的 50 次 `createAndRunThread` 硬上限，所有目标 Agent 共享 | `modules/notion/threads/index.ts` 注释 |
+| 50 次上限 | 单个 parent thread 的 `createAndRunThread` 调用硬上限（50 次），所有目标 Agent 共享 | `modules/notion/threads/index.ts` 注释 |
 | 执行手册 | 用 Notion 页面作持久化状态源，跨 session 恢复进度的协作模式 | `modules/notion/pages/index.ts` → `LoadPage` / `UpdatePage` |
 | 桥梁文件 | 用摘要替代全文传递的 context 管理策略（如 BOOK_SUMMARY.md） | 无专属 API——是设计模式 |
 | 通信协议 | 多 Agent 间 instructions / response 的格式约定 | 无专属 API——是设计模式 |
@@ -24,9 +24,9 @@
 
 ### 关键关系
 
-- 一个 parent thread 持有 50 次调用预算，跨所有目标 Agent 共享
+- 一个 parent thread 持有 50 次上限，跨所有目标 Agent 共享
 - `createAndRunThread` 的 `response` 只含最终文本——副作用（页面创建、MCP 调用、文件写入）不在 response 中
-- 续写（传 `threadUrl`）保留子线程的对话上下文，但每次续写仍消耗 1 次调用预算
+- 续写（传 `threadUrl`）保留子线程的对话上下文，但每次续写仍消耗 1 次配额
 - 执行手册模式和桥梁文件模式是互补的：执行手册管**进度状态**，桥梁文件管**知识 context**
 - `wait` 让 Agent 暂停后恢复，适用于轮询等待外部操作完成的场景
 - `updateTodos` 仅追踪 Agent 内部进度，不影响 Notion 页面上的 to-do 内容
@@ -36,7 +36,7 @@
 | 关注点 | Ch4 覆盖 | Ch5 覆盖 |
 |--------|----------|----------|
 | createAndRunThread 的**调用方式** | ✅ 签名、参数、返回值 | — |
-| createAndRunThread 的**架构模式** | — | ✅ 预算分配、并行策略、链式编排 |
+| createAndRunThread 的**架构模式** | — | ✅ 配额分配、并行策略、链式编排 |
 | interact 权限**如何配置** | ✅ permission 格式 | — |
 | interact 权限在**多角色流程中的拓扑** | — | ✅ 权限图设计 |
 | 单个 Agent 的 Skill 编写 | ✅ Instructions 页面范式 | — |
@@ -62,7 +62,7 @@
 
 ```typescript
 const { threadUrl, response } = await connections.notion.createAndRunThread({
-  agentUrl: "URL",       // 目标 Agent（省略 = 自调自）
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",       // 目标 Agent（省略 = 自调自）
   instructions: "执行任务 X...",  // 完整指令
 })
 ```
@@ -79,7 +79,7 @@ const { threadUrl, response } = await connections.notion.createAndRunThread({
 
 ```typescript
 const { response: round2 } = await connections.notion.createAndRunThread({
-  agentUrl: "URL",
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   threadUrl: threadUrl,           // 续写已有线程
   instructions: "基于上一轮结果，修改第三段",
 })
@@ -108,7 +108,7 @@ const { analysis } = await connections.notion.investigateThread({
 
 ### 常见陷阱
 
-- ⚠️ **每次续写消耗 1 次调用预算**：续写不是"免费"的。一个 parent thread 的 50 次上限包括所有创建和续写调用。在设计多轮交互时，将预算纳入规划。
+- ⚠️ **每次续写消耗 1 次配额**：续写不是"免费"的。一个 parent thread 的 50 次上限包括所有创建和续写调用。在设计多轮交互时，将配额纳入规划。
 - ⚠️ **续写保留上下文，但不保留工具状态**：子 Agent 的对话历史被保留，但工具（如 MCP 连接）的状态可能因超时而需重新建立。
 - ⚠️ **response 与副作用分离**：子 Agent 可能创建了 10 个页面、commit 了 3 个文件，但 response 只包含它最终回复的文本。需要知道副作用结果？在 instructions 中明确要求子 Agent 在回复中报告（如 commit hash、页面 URL）。
 - ⚠️ **investigateThread 是只读分析**：它基于 transcript 做分析，不会重新执行线程中的操作，也不会触发子 Agent。
@@ -162,13 +162,13 @@ Phase 2 — 逐章写作
 
 ```typescript
 // 1. 读取执行手册
-const handbook = await connections.notion.loadPage({ url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9" })
+const handbook = await connections.notion.loadPage({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 // 2. 解析当前状态（从 content 中提取）
 // 3. 决定下一步行动
 // 4. 执行行动
 // 5. 更新执行手册
 await connections.notion.updatePage({
-  url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9",
+  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   contentUpdates: [{
     oldStr: "| Ch5 | 🔵 写作中 | — | 著作郎已派写 |",
     newStr: "| Ch5 | 🟡 审阅中 | def5678 | draft v1 已提交 |",
@@ -280,7 +280,7 @@ const result = connections.system.wait({
 
 ```typescript
 await connections.notion.createAndRunThread({
-  agentUrl: "OPTIONAL_NOTICE",
+  agentUrl: "dataSourceUrl",  // 校勘官
   instructions: `# 派审指令
 
 ## 审阅对象
@@ -304,7 +304,7 @@ await connections.notion.createAndRunThread({
 
 ```typescript
 // 著作郎写完后返回给总编的不是全文，而是：
-// "commit hash: abc1234 | 字数: 12000 | 新术语: 调用预算, Phase"
+// "commit hash: abc1234 | 字数: 12000 | 新术语: Phase"
 // 总编拿到 commit hash，传给校勘官的 instructions 中包含 hash 而非全文
 ```
 
@@ -374,11 +374,11 @@ const [r1, r2, r3] = await Promise.all([s1, s2, s3])
 ```typescript
 // 总编同时派写和派查
 const writeTask = connections.notion.createAndRunThread({
-  agentUrl: "URL",  // 著作郎
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 著作郎
   instructions: "写 Ch5 draft...",
 })
 const researchTask = connections.notion.createAndRunThread({
-  agentUrl: "connector-*-1",  // 调研员
+  agentUrl: "okrs",  // 调研员
   instructions: "调查 thread 续写的 context 保留机制...",
 })
 
@@ -394,9 +394,9 @@ const [writeResult, researchResult] = await Promise.all([writeTask, researchTask
 3. **调整衔接**：添加过渡段、统一编号、消除矛盾
 4. **统一 commit**：将合并后的完整内容一次性写入目标位置
 
-### 预算规划
+### 配额规划
 
-| 并行度 | 消耗预算 | 剩余可用 | 适用场景 |
+| 并行度 | 消耗配额 | 剩余可用 | 适用场景 |
 |--------|----------|----------|----------|
 | 3 个分身 | 3 次 | 47 次 | 中等章节拆分 |
 | 5 个分身 | 5 次 | 45 次 | 大型章节高并行 |
@@ -406,7 +406,7 @@ const [writeResult, researchResult] = await Promise.all([writeTask, researchTask
 ### 常见陷阱
 
 - ⚠️ **并行子任务必须操作独立资源**：两个分身同时 `updatePage` 同一个页面，`oldStr` 匹配会因并发修改而失败。设计时确保每个分身写入不同的页面或文件。
-- ⚠️ **并行调用同时消耗预算**：5 个并行的 `createAndRunThread` 消耗 5 次配额，与串行相同。并行节省的是时间，不是预算。
+- ⚠️ **并行调用同时消耗配额**：5 个并行的 `createAndRunThread` 消耗 5 次配额，与串行相同。并行节省的是时间，不是配额。
 - ⚠️ **分身没有共享 context**：每个分身是独立的 Agent 实例，不共享父线程的对话历史。需要共享的 context 必须在每个分身的 instructions 中重复传递（或指向同一个桥梁文件）。
 - ⚠️ **汇总合并是不可省略的步骤**：并行写作的产出需要统一编辑。如果直接将分身输出拼接，几乎必然出现术语不一致、风格差异、编号冲突。
 
@@ -443,7 +443,7 @@ const [writeResult, researchResult] = await Promise.all([writeTask, researchTask
 
 ```typescript
 const { response: writeReport } = await connections.notion.createAndRunThread({
-  agentUrl: "URL",  // 著作郎
+  agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 著作郎
   instructions: `# 派写指令：Ch5
 
 ## GitHub Repo
@@ -460,14 +460,14 @@ S5.1 ~ S5.10（完整清单）
 ## 输出要求
 commit + 返回：commit hash + 字数 + 新术语`,
 })
-// writeReport → "commit: abc1234 | 字数: 12000 | 新术语: 调用预算, Phase"
+// writeReport → "commit: abc1234 | 字数: 12000 | 新术语: Phase"
 ```
 
 #### 步骤 2：派审
 
 ```typescript
 const { response: reviewReport } = await connections.notion.createAndRunThread({
-  agentUrl: "OPTIONAL_NOTICE",  // 校勘官
+  agentUrl: "dataSourceUrl",  // 校勘官
   instructions: `# 派审指令：Ch5
 
 ## 审阅对象
@@ -499,7 +499,7 @@ if (!hasCritical && !hasMajor) {
 } else if (revisionCount < MAX_REVISIONS) {
   // 派修——将审阅意见转发给著作郎
   const { response: revisionReport } = await connections.notion.createAndRunThread({
-    agentUrl: "URL",
+    agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 著作郎
     instructions: `# 修订指令：Ch5
 
 ## 校勘官意见
@@ -523,8 +523,8 @@ commit hash + 修订摘要`,
 | 参数 | 推荐值 | 原因 |
 |------|--------|------|
 | 最大修订轮次 | 2-3 轮 | 超过 3 轮通常说明指令不清晰，应调整指令而非继续修订 |
-| 每轮预算消耗 | 2 次（派修 + 派审） | 3 轮修订 = 6 次额外消耗 |
-| 全流程预算预估 | 派写 1 + 派审 1 + 修订 2×2 = 6 次 | 单章完整闭环约消耗 6 次配额 |
+| 每轮配额消耗 | 2 次（派修 + 派审） | 3 轮修订 = 6 次额外消耗 |
+| 全流程配额预估 | 派写 1 + 派审 1 + 修订 2×2 = 6 次 | 单章完整闭环约消耗 6 次配额 |
 
 ### 常见陷阱
 
@@ -551,7 +551,7 @@ commit hash + 修订摘要`,
 - `createAndRunThread` 调用失败或返回异常 response
 - MCP 工具调用（`runTool`）返回错误
 - 审阅发现不可接受的质量问题
-- 达到 50 次调用上限
+- 达到 50 次上限
 
 ### 异常分类与处置
 
@@ -590,7 +590,7 @@ await connections.notion.sendNotification({
 2. 如果已达修订上限 → 记录问题，通知用户决定是否人工介入
 3. 不要尝试自动修复结构性问题——这通常说明原始指令存在歧义
 
-#### 类型四：调用预算耗尽
+#### 类型四：50 次上限耗尽
 
 **表现**：`createAndRunThread` 返回 `max sub agents exceeded`
 
@@ -602,14 +602,14 @@ await connections.notion.sendNotification({
 ```typescript
 // 将进度持久化
 await connections.notion.updatePage({
-  url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9",
+  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   contentUpdates: [{
     oldStr: "| Ch5 | 🔵 写作中",
-    newStr: "| Ch5 | ⚠️ 预算耗尽，需在新 session 继续",
+    newStr: "| Ch5 | ⚠️ 配额耗尽，需在新 session 继续",
   }],
 })
 await connections.notion.sendNotification({
-  headerContent: "调用预算耗尽",
+  headerContent: "50 次上限耗尽",
   bodyContent: "Ch5 写审流程中 50 次上限已满，请开新 session 继续",
   sendToWorkflowOwner: true,
 })
@@ -630,9 +630,9 @@ await connections.notion.sendNotification({
 ### 常见陷阱
 
 - ⚠️ **不要在失败的子线程上续写**：如果子 Agent 运行异常，用新的 `createAndRunThread`（不传 `threadUrl`）重新开始，而非续写。续写会继承有问题的上下文。
-- ⚠️ **重试有预算成本**：每次重试都消耗 1 次调用预算。在重试前先分析失败原因（用 `investigateThread`），避免盲目重试浪费预算。
+- ⚠️ **重试有配额成本**：每次重试都消耗 1 次配额。在重试前先分析失败原因（用 `investigateThread`），避免盲目重试浪费配额。
 - ⚠️ **异常通知要简洁**：`sendNotification` 的 `bodyContent` 限制 100 字符。详细错误信息写入执行手册，通知只传摘要。
-- ⚠️ **预算耗尽时不要尝试任何子线程调用**：包括尝试「用子线程保存进度」——此时应直接用当前 Agent 自身的工具调用来持久化状态。
+- ⚠️ **配额耗尽时不要尝试任何子线程调用**：包括尝试「用子线程保存进度」——此时应直接用当前 Agent 自身的工具调用来持久化状态。
 
 ### 深钻指针
 
@@ -666,7 +666,7 @@ await connections.notion.sendNotification({
 3. 创建执行手册页面
 4. 确认所有参与 Agent 的权限配置（interact 权限、MCP 权限、内容权限）
 
-**预算消耗**：0 次子线程（总编自己执行）
+**配额消耗**：0 次子线程（总编自己执行）
 
 #### Phase 1-N：逐章写审
 
@@ -687,11 +687,11 @@ await connections.notion.sendNotification({
                 （最多重复 2 轮）
 ```
 
-**单章预算**：2-6 次（写+审 = 2，每轮修订 +2，最多 3 轮 = 6）
+**单章配额**：2-6 次（写+审 = 2，每轮修订 +2，最多 3 轮 = 6）
 
-**多章预算规划**：
+**多章配额规划**：
 
-| 章数 | 最小预算（全部一次通过） | 最大预算（每章 3 轮修订） |
+| 章数 | 最小配额（全部一次通过） | 最大配额（每章 3 轮修订） |
 |------|------------------------|--------------------------|
 | 3 章 | 6 次 | 18 次 |
 | 5 章 | 10 次 | 30 次 |
@@ -729,10 +729,10 @@ await connections.notion.sendNotification({
 
 ### 常见陷阱
 
-- ⚠️ **不要试图在一个 session 中完成全部 phase**：6 章 × 6 次/章 = 36 次，加上初始化和收尾，很容易超过 50 次。合理规划每个 session 处理 2-3 章。
+- ⚠️ **不要试图在一个 session 中完成全部 phase**：6 章 × 6 次/章 = 36 次，加上初始化和收尾，很容易超过 50 次上限。合理规划每个 session 处理 2-3 章。
 - ⚠️ **BOOK_SUMMARY 更新是 phase 之间的硬性步骤**：每章验收通过后，必须立即更新 BOOK_SUMMARY，再进入下一章。否则下一章的 Agent 会拿到过时的 context。
 - ⚠️ **Phase 0 不要跳过**：确认权限配置、repo 结构、占位文件——这些准备工作如果缺失，后续 phase 会频繁出错。
-- ⚠️ **跨章审查（Phase N+1）的预算预留**：在逐章阶段就要预留跨章审查的预算（约 1 次/章），不要把 50 次全部用在逐章写审上。
+- ⚠️ **跨章审查（Phase N+1）的配额预留**：在逐章阶段就要预留跨章审查的配额（约 1 次/章），不要把 50 次全部用在逐章写审上。
 
 ### 深钻指针
 
@@ -806,7 +806,7 @@ commit hash + 字数 + 新术语
 ```
 commit: abc1234
 字数: 12000
-新术语: 调用预算, Phase, 桥梁文件
+新术语: Phase, 桥梁文件
 验证发现: 无重大问题
 ```
 
@@ -820,7 +820,7 @@ commit: abc1234
 
 ### major
 1. 代码示例中 agent URL 使用裸字符串而非 compressed URL
-2. glossary 中的「调用预算」未在正文中使用
+2. glossary 中的「50 次上限」未在正文中使用
 
 ### minor
 1. S5.1 最后一段缺少深钻指针
@@ -845,7 +845,7 @@ commit: abc1234
 
 - ⚠️ **不要假设子 Agent 会主动报告**：如果 instructions 中没有要求「返回 commit hash」，子 Agent 可能只回复「已完成」。输出格式必须在 instructions 中明确要求。
 - ⚠️ **指令中的代码/路径必须精确**：repo name、文件路径、branch 名——任何一个错误都会导致子 Agent 操作失败。从执行手册或 context 文件中直接复制，不要凭记忆。
-- ⚠️ **避免嵌套调度**：子 Agent 不应再开子线程调度其他 Agent（除非是预设的「自调自」分身模式）。多层嵌套会导致预算消耗不可控且调试困难。
+- ⚠️ **避免嵌套调度**：子 Agent 不应再开子线程调度其他 Agent（除非是预设的「自调自」分身模式）。多层嵌套会导致配额消耗不可控且调试困难。
 - ⚠️ **response 不是可靠的结构化数据通道**：response 是自由文本，子 Agent 可能不严格遵循约定格式。调用方应做容错解析，不要假设完美格式。
 
 ### 深钻指针
@@ -1018,7 +1018,7 @@ await connections.notion.sendNotification({
 | 单章审阅通过 | 完成通知 | "Ch5 验收通过" |
 | 修订达上限仍未通过 | 异常告警 | "Ch5 2轮修订后仍有 critical 问题" |
 | MCP / 权限错误 | 异常告警 | "GitHub API 失败，需检查认证" |
-| 50 次上限耗尽 | 异常告警 | "预算耗尽，请开新 session 继续" |
+| 50 次上限耗尽 | 异常告警 | "配额耗尽，请开新 session 继续" |
 | 全部章节完成 | 完成通知 | "全书 6 章全部通过验收" |
 
 ### Notification vs createAndRunThread
@@ -1063,7 +1063,6 @@ await connections.notion.sendNotification({
 
 | 术语 | 定义 | 首次出现 |
 |------|------|----------|
-| 调用预算 | 单个 parent thread 的 50 次 `createAndRunThread` 上限，所有目标 Agent 共享 | S5.1 |
 | Phase | 全流程编排中的阶段划分单位，如初始化、逐章写审、跨章审查、收尾 | S5.7 |
 | 通信协议 | 多 Agent 间 instructions / response 的格式约定，包括自包含原则和结构化格式 | S5.8 |
 | 指令自包含原则 | 每次 createAndRunThread 的 instructions 必须包含子 Agent 执行所需的全部信息 | S5.8 |
