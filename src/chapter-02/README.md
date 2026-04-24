@@ -82,7 +82,7 @@ await connections.notion.createPage({
 ```ts
 await connections.notion.createPage({
   parent: { type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" },
-  pageTemplate: "dataSourceUrl",  // 模板页面的 compressed URL
+  pageTemplate: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",  // 模板页面的 compressed URL
   properties: { Title: "从模板创建的任务" }
 })
 ```
@@ -98,10 +98,10 @@ await connections.notion.createPage({
 // 先加载数据库确认 wiki 状态
 const db = await connections.notion.loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "okrs"
+// db.configuration.wikiPageUrl === "dataSourceUrl"
 
 await connections.notion.createPage({
-  parent: { type: "page", url: "okrs" },  // wikiPageUrl，不是 dataSource URL
+  parent: { type: "page", url: "dataSourceUrl" },  // wikiPageUrl，不是 dataSource URL
   properties: { title: "Wiki 新条目" },
   content: "这是一个 wiki 页面。"
 })
@@ -285,9 +285,9 @@ await connections.notion.updatePage({
 
 // 无 limit 的 relation → 页面 URL 数组
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "okrs",
   propertyUpdates: {
-    "Sub-tasks": ["okrs", "teams", "URL"]  // 多选
+    "Sub-tasks": ["teams", "URL", "example.com"]  // 多选
   }
 })
 ```
@@ -543,13 +543,13 @@ await connections.notion.createPage({
 通过 `updateDatabase` 的 edits 修改 data source 的 `default_page_template` 字段。该字段的值是模板页面的 compressed URL，必须是已存在于该 data source `page_templates` 列表中的模板。
 
 ```ts
-// 假设 loadDatabase 返回的 data source 中已有模板 dataSourceUrl
+// 假设 loadDatabase 返回的 data source 中已有模板 agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40
 await connections.notion.updateDatabase({
   databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   edits: [{
     command: "set",
     path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
-    value: "dataSourceUrl"
+    value: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
   }]
 })
 ```
@@ -573,7 +573,7 @@ await connections.notion.updateDatabase({
 
 ```ts
 await connections.notion.deletePages({
-  pageUrls: ["dataSourceUrl"]
+  pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"]
 })
 ```
 
@@ -754,7 +754,7 @@ await connections.notion.unarchivePages({
 
 ```ts
 await connections.notion.deletePages({
-  pageUrls: ["teams", "URL"]
+  pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"]
 })
 ```
 
