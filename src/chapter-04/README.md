@@ -191,7 +191,7 @@ const agent = await connections.notion.createAgent({
 
 ### 常见陷阱
 
-- ⚠️ **权限粒度不传递**：给 Agent 某个数据库的 edit 权限，不自动意味着它能编辑数据库内的页面——页面会继承数据库权限，但这是 Notion 内部行为，不需要单独配置页面权限。数据库级别权限覆盖其内部页面。
+- ⚠️ **数据库级权限会继承到内部页面**：给 Agent 某个数据库的 edit 权限，数据库内的页面会继承该权限，无需对每个页面单独配权。
 - ⚠️ **interact 权限是单向的**：Agent A 要调用 Agent B 的 `createAndRunThread`，需要 Agent A 的 Notion integration 中配置 `{ identifier: { type: "agent", url: "dataSourceUrl" }, actions: ["interact"] }`。如果 B 也需要回调 A，B 的配置中也需要对 A 的 interact 权限。
 - ⚠️ **`sharing.ts` 的权限与 Agent 权限独立**：`loadPermissions` / `updatePermission` 管理的是页面/数据库的分享权限（用户级别），不影响 Custom Agent 的访问。Agent 权限通过 `loadAgent` / `updateAgent` 管理。
 - ⚠️ **actions 是数组**：即使只有一个 action 也必须用数组形式，如 `["edit"]`，不是 `"edit"`。
@@ -508,7 +508,7 @@ const { response: followUp } = await connections.notion.createAndRunThread({
 
 ### 关键参数
 
-- `agentUrl`：目标 Agent 的 compressed URL。省略则调用自身。传 `"personal-agent"` 可调用 Personal Agent（仅限 Personal Agent 调 Custom Agent 时使用方向）。
+- `agentUrl`：目标 Agent 的 compressed URL。省略则调用自身。`"personal-agent"` 是特殊常量，仅 Personal Agent 调用自身时使用。Custom Agent 不可用此值。
 - `threadUrl`：可选，传入已有 thread URL 以续写对话
 - `instructions`：发送给目标 Agent 的消息/指令
 - 返回值：`{ threadUrl: string, response: string }`
@@ -571,7 +571,7 @@ const [result1, result2] = await Promise.all([scene1, scene2])
 
 ```typescript
 const { response } = await connections.notion.createAndRunThread({
-  agentUrl: "okrs",
+  agentUrl: "dataSourceUrl",
   instructions: "审阅以下内容并返回修改意见：...",
 })
 ```
@@ -720,7 +720,7 @@ await connections.notion.updateAgent({
       path: ["integrations", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "permissions"],
       value: [
         ...currentPerms,
-        { identifier: { type: "agent", url: "dataSourceUrl" }, actions: ["interact"] },
+        { identifier: { type: "agent", url: "okrs" }, actions: ["interact"] },
       ],
     },
   ],
@@ -1035,7 +1035,7 @@ await connections.notion.sendNotification({
 | Instructions Page | Agent 的指令页面，本质是 Notion Page，通过 instructionsPageUrl 关联 | S4.1 |
 | Integration | Agent 与一个 module 的连接记录，含 type、name、permissions | S4.1 |
 | Permission（Agent 层） | 挂在 Notion integration 下的访问控制项，含 identifier + actions | S4.2 |
-| interact 权限 | Agent 间通信的授权，identifier 为 { type: "agent", url: "dataSourceUrl" }，actions 为 ["interact"] | S4.2 |
+| interact 权限 | Agent 间通信的授权，identifier 为 `{ type: "agent", url: "dataSourceUrl" }`，actions 为 `["interact"]` | S4.2 |
 | MCP Server | 外部工具服务协议，Agent 通过 mcpServer integration 连接后调用其 tools | S4.3 |
 | Trigger | Agent 的自动触发条件，含 enabled、state（类型配置）、integrationUrl | S4.4 |
 | Recurrence Trigger | 定时触发器，支持 hour/day/week/month/year 频率 | S4.4 |
