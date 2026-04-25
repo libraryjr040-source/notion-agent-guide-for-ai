@@ -476,13 +476,13 @@ await connections.notion.createPage({
 通过 `updateDatabase` 的 edits 修改 data source 的 `default_page_template` 字段。该字段的值是模板页面的 compressed URL，必须是已存在于该 data source `page_templates` 列表中的模板。
 
 ```ts
-// 假设 loadDatabase 返回的 data source 中已有模板 agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40
+// 假设 loadDatabase 返回的 data source 中已有模板 dataSourceUrl
 await connections.notion.updateDatabase({
   databaseUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
   edits: [{
     command: "set",
     path: ["dataSources", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "default_page_template"],
-    value: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"
+    value: "dataSourceUrl"
   }]
 })
 ```
@@ -506,7 +506,7 @@ await connections.notion.updateDatabase({
 
 ```ts
 await connections.notion.deletePages({
-  pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"]
+  pageUrls: ["dataSourceUrl"]
 })
 ```
 
@@ -748,7 +748,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 
 ### 踩坑清单
 
-- ⚠️ **src 中的 URL 格式**：`src` 属性支持两种合法格式：compressed URL（如 `src="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`）和裸完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**把完整 URL 塞进双花括号里——例如 `src="` + `` + `https://example.com` + `` + `"` 会导致解析失败，因为系统会尝试将花括号内的内容当作 compressed URL 解压。
+- ⚠️ **src 中的 URL 格式**：`src` 属性支持两种合法格式：compressed URL（如 `src="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`）和裸完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**把完整 URL 塞进双花括号里——例如写成 `src="` 后跟 `https://example.com` 后跟 `"` 会导致解析失败，因为系统会尝试将花括号内的内容当作 compressed URL 解压，而完整 URL 不是合法的 compressed URL。简言之：要么用 compressed URL `agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40`，要么用裸 URL `https://example.com/file.pdf`，不要混搭。
 - ⚠️ **图片用 Markdown 语法**：图片使用 `![描述](URL)` 格式，不用 `<img>` 标签。
 
 ### 深钻指针
