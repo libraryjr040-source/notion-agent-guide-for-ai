@@ -263,7 +263,7 @@ Place 属性展开为五个键，最简形式只需 address：
 
 ```ts
 await connections.notion.updatePage({
-  url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  url: "okrs",
   propertyUpdates: {
     "place:Location:address": "1600 Pennsylvania Ave NW, Washington, DC 20500"
   }
