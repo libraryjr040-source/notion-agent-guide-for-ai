@@ -436,9 +436,7 @@ await connections.notion.updatePage({
 
 ### 踩坑清单
 
-- ⚠️ **toggle children 未缩进**：toggle 和 toggle heading 的内容必须 tab 缩进，否则不会包含在 toggle 内。触发条件：children 没有缩进。解法：所有 children 内容用 tab 缩进。
-- ⚠️ **callout 内用 HTML 格式化**：callout 内应使用 Markdown 格式化（`**bold**`），不用 HTML（`<strong>`）。触发条件：习惯性用 HTML 标签。解法：统一使用 Markdown。
-- ⚠️ **table cell 中放 block 类型**：table cell 只支持 rich text，放入标题、列表等 block 类型不会正确渲染。解法：只在 cell 中使用 inline 格式化。
+- ⚠️ **高级 block 常见陷阱**：toggle / toggle heading 的 children 必须 tab 缩进否则不会折叠；callout 内用 Markdown 格式化（`**bold**`）而非 HTML（`<strong>`）；table cell 只支持 rich text，不能放标题、列表等 block 类型。完整语法和约束 → `modules/notion/notion-markdown.md` → Advanced Block types。
 - ⚠️ **`<page>` 标签误用**：用已有页面 URL 的 `<page>` 标签会把该页面移动为子页面；删除 `<page>` 标签会移除子页面。如果只是想引用页面，用 `<mention-page>`。
 - ⚠️ **代码块内转义**：代码块（` ``` `）内的内容是 literal，不要转义特殊字符。只有代码块外才需要转义。
 - ⚠️ **inline code 中不能换行**：inline code（`` ` ``）中不能用普通换行，用 `<br>` 代替。
@@ -748,7 +746,7 @@ const result = await connections.notion.viewFileUrl({ url: "agent://755c9fa4-4e9
 
 ### 踩坑清单
 
-- ⚠️ **src 中的 URL 格式**：`src` 属性支持两种合法格式：compressed URL（如 `src="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`）和裸完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**把完整 URL 塞进双花括号里——例如写成 `src="` + `` + `https://example.com` + `` + `"` 这种形式会导致解析失败，因为系统会尝试将花括号内的内容当作 compressed URL 解压，而完整 URL 不是合法的 compressed URL。简言之：要么用 compressed URL `agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40`，要么用裸 URL `https://example.com/file.pdf`，不要混搭。
+- ⚠️ **src URL 格式二选一**：`src` 属性接受两种合法格式——compressed URL（如 `src="agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`）和裸完整 URL（如 `src="https://example.com/file.pdf"`）。但**不能**把完整 URL 包在双花括号内——系统会将花括号内的内容当作 compressed URL 尝试解压，而完整 URL 不是合法的 compressed URL，导致解析失败。简言之：要么用 compressed URL `agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40`，要么用裸 URL `https://example.com/file.pdf`，不要混搭。
 - ⚠️ **图片用 Markdown 语法**：图片使用 `![描述](URL)` 格式，不用 `<img>` 标签。
 
 ### 深钻指针
