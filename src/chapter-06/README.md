@@ -12,7 +12,7 @@
 
 本章涉及的核心概念关系：
 
-- **compressed URL**：系统分配的实体标识符（如 `"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`、`"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`），是所有 API 调用中引用实体的唯一合法方式。永远不要自行构造——只使用 `loadPage`、`loadDatabase`、`loadAgent` 等函数返回的值。
+- **compressed URL**：系统分配的实体标识符（如 `"https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c"`、`"https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca"`），是所有 API 调用中引用实体的唯一合法方式。永远不要自行构造——只使用 `loadPage`、`loadDatabase`、`loadAgent` 等函数返回的值。
 - **CREATE-\* 占位符**：仅在同一次 `createDatabase` / `createAgent` 调用内部使用的临时 key，系统会在创建完成后替换为真实 compressed URL。跨调用使用 CREATE-\* 必定失败。
 - **property key**：数据源 schema 中属性的列名，大小写敏感。`"Status"` ≠ `"status"`。
 - **展开列名**：date 和 place 类型的属性在 SQL 查询和 propertyUpdates 中使用展开格式（如 `"date:Due Date:start"`、`"place:Location:address"`），而非直接使用属性名。
@@ -55,9 +55,9 @@
 // 添加对特定页面的编辑权限
 {
   "command": "set",
-  "path": ["integrations", "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "permissions"],
+  "path": ["integrations", "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9", "permissions"],
   "value": [
-    { "identifier": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "actions": ["edit"] },
+    { "identifier": "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c", "actions": ["edit"] },
     { "identifier": "*", "actions": ["view"] }
     // ... 保留原有权限项
   ]
@@ -82,7 +82,7 @@
 在调用方 agent 的 Notion integration permissions 中添加：
 
 ```jsonc
-{ "identifier": { "type": "agent", "url": "dataSourceUrl" }, "actions": ["interact"] }
+{ "identifier": { "type": "agent", "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e" }, "actions": ["interact"] }
 ```
 
 **预防策略**：
@@ -140,7 +140,7 @@
 
 ```jsonc
 {
-  "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40",
+  "url": "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c",
   "propertyUpdates": {
     "date:Due Date:start": "2025-01-15",
     "date:Due Date:end": null,
@@ -155,7 +155,7 @@
 
 **预防策略**：
 - 看到 schema 中 `type: "date"` 的属性，立即切换到 `"date:<属性名>:start/end/is_datetime"` 模式
-- SQL 查询中同理：`SELECT "date:Due Date:start" FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40"`
+- SQL 查询中同理：`SELECT "date:Due Date:start" FROM "collection://336c9fa4-4e97-8023-bcdc-000b1d4b5470"`
 - 属性名中的空格、特殊字符保持原样，不要转义
 
 **深钻指针**：`modules/notion/databases/data-source-sqlite-tables.md`（Date 列展开规则）、`modules/notion/pages/AGENTS.md`（Property value formats → Date）
@@ -170,7 +170,7 @@
 
 ```jsonc
 {
-  "url": "dataSourceUrl",
+  "url": "https://www.notion.so/33ec9fa44e97803cbc8ee59962af9534",
   "propertyUpdates": {
     "place:Location:address": "1600 Pennsylvania Ave NW, Washington, DC 20500"
   }
@@ -201,13 +201,13 @@
 - **SQL 查询**中过滤 checkbox：
 
 ```sql
-SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" WHERE "Is Active" = '__YES__'
+SELECT url FROM "collection://336c9fa4-4e97-8023-bcdc-000b1d4b5470" WHERE "Is Active" = '__YES__'
 ```
 
 - **propertyUpdates** 中设置 checkbox：
 
 ```jsonc
-{ "url": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "propertyUpdates": { "Is Active": true } }
+{ "url": "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c", "propertyUpdates": { "Is Active": true } }
 ```
 
 **预防策略**：
@@ -229,7 +229,7 @@ SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe
 - SQL 中解析数组值用 `json_each`：
 
 ```sql
-SELECT url FROM "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" t
+SELECT url FROM "collection://336c9fa4-4e97-8023-bcdc-000b1d4b5470" t
 WHERE EXISTS (
   SELECT 1 FROM json_each(t."Tags") WHERE value = 'Important'
 )
@@ -239,7 +239,7 @@ WHERE EXISTS (
 
 ```sql
 SELECT url, json_extract("Project", '$') AS project_url
-FROM "dataSourceUrl"
+FROM "collection://85fe022d-f83f-47c2-88c4-3c150f5a9032"
 ```
 
 - propertyUpdates 写入：
@@ -249,16 +249,16 @@ FROM "dataSourceUrl"
 { "Tags": ["Important", "Urgent"] }
 
 // relation (limit=1): 单值字符串
-{ "Project": "okrs" }
+{ "Project": "https://www.notion.so/88a395759257472b89f9d38ae3a1df2f" }
 
 // relation (无 limit): 数组
-{ "Related Tasks": ["teams", "URL"] }
+{ "Related Tasks": ["https://www.notion.so/16367caadd7e43a9ac3ae6592a8c6370", "https://www.notion.so/df702feac8104b7ea968cbb1719130f5"] }
 
 // person (limit=1): 单值字符串
-{ "Owner": "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }
+{ "Owner": "user://332d872b-594c-816c-a9a9-000276e2496b" }
 
 // person (无 limit): 数组
-{ "Reviewers": ["agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40", "dataSourceUrl"] }
+{ "Reviewers": ["user://332d872b-594c-816c-a9a9-000276e2496b", "user://34cc9fa4-4e97-8194-b96b-0027cef5b078"] }
 ```
 
 **预防策略**：
@@ -294,7 +294,7 @@ FROM "dataSourceUrl"
 
 // ✅ 正确：已有属性用 compressed URL
 "schema": {
-  "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40": { "type": "title", "name": "Title" }
+  "collection://336c9fa4-4e97-8023-bcdc-000b1d4b5470": { "type": "title", "name": "Title" }
 }
 ```
 
@@ -310,7 +310,7 @@ FROM "dataSourceUrl"
 
 **根因分析**：
 - `CREATE-*` 是临时占位符，仅在同一次 create 调用中有效。创建完成后，系统返回真实 compressed URL，后续必须使用真实 URL
-- compressed URL 是系统分配的，永远不要自行构造（如手写 `"https://www.notion.so/34cc9fa44e9780738c20f6409bc60091"`）
+- compressed URL 是系统分配的，永远不要自行构造
 
 **修复方案**：
 
@@ -431,14 +431,14 @@ FROM "dataSourceUrl"
 ```jsonc
 // ❌ 修改了 database block 的文本
 {
-  "oldStr": "<database url=\"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40\" inline=\"false\">Tasks</database>",
-  "newStr": "<database url=\"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40\" inline=\"false\">My Tasks</database>"
+  "oldStr": "<database url=\"https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca\" inline=\"false\">Tasks</database>",
+  "newStr": "<database url=\"https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca\" inline=\"false\">My Tasks</database>"
 }
 
 // ✅ 保持 database block 原样，只修改周围内容
 {
-  "oldStr": "## 任务\n<database url=\"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40\" inline=\"false\">Tasks</database>",
-  "newStr": "## 任务列表\n<database url=\"agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40\" inline=\"false\">Tasks</database>"
+  "oldStr": "## 任务\n<database url=\"https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca\" inline=\"false\">Tasks</database>",
+  "newStr": "## 任务列表\n<database url=\"https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca\" inline=\"false\">Tasks</database>"
 }
 ```
 
@@ -456,7 +456,7 @@ FROM "dataSourceUrl"
 
 ### 6.5.1 Wiki parent 错误
 
-**典型症状**：在 wiki 数据库中创建页面时，使用 `{ type: "dataSource", url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" }` 作为 parent，页面创建失败或位置不正确。
+**典型症状**：在 wiki 数据库中创建页面时，使用 `{ type: "dataSource", url: "collection://336c9fa4-4e97-8023-bcdc-000b1d4b5470" }` 作为 parent，页面创建失败或位置不正确。
 
 **根因分析**：Wiki 数据库（`isWiki: true`）的页面创建必须使用 `{ type: "page", url: wikiPageUrl }` 作为 parent，而不是 dataSource parent。`wikiPageUrl` 是 wiki 的 collection view page，从 `loadDatabase` 的返回值中获取。
 
@@ -464,13 +464,13 @@ FROM "dataSourceUrl"
 
 ```jsonc
 // 1. 先 loadDatabase 获取 wiki 信息
-const db = await loadDatabase({ url: "agent://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40" })
+const db = await loadDatabase({ url: "https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca" })
 // db.configuration.isWiki === true
-// db.configuration.wikiPageUrl === "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9"
+// db.configuration.wikiPageUrl === "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c"
 
 // 2. 用 wikiPageUrl 作为 parent
 await createPage({
-  parent: { type: "page", url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/notion/86b06b1b-9c54-4a7f-ac10-fefcf3d177a9" },  // wikiPageUrl
+  parent: { type: "page", url: "https://www.notion.so/337c9fa44e978052a7fae5508bd47d1c" },  // wikiPageUrl
   properties: { title: "新 Wiki 页面" }
 })
 ```
@@ -497,13 +497,13 @@ await createPage({
 // 创建 linked database
 await createDatabase({
   name: "Tasks View",
-  parent: { type: "page", url: "example.com" },
+  parent: { type: "page", url: "https://www.notion.so/33ec9fa44e97803cbc8ee59962af9534" },
   dataSources: {},  // linked database 不拥有 data source
   views: {
     "CREATE-view": {
       type: "table",
       name: "All Tasks",
-      dataSourceUrl: "okrs"  // 引用外部 data source
+      dataSourceUrl: "collection://340c9fa4-4e97-8020-b323-000bd2e94488"  // 引用外部 data source
     }
   }
 })
@@ -614,7 +614,7 @@ await search({
 
 ### 6.7.1 createAndRunThread 被拒（无 interact 权限）
 
-**典型症状**：调用 `createAndRunThread({ agentUrl: "dataSourceUrl" })` 时被拒绝。
+**典型症状**：调用 `createAndRunThread({ agentUrl: "agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e" })` 时被拒绝。
 
 **根因分析**：Custom Agent 向另一个 Custom Agent 发消息需要 interact 权限。该权限在调用方的 Notion integration 中声明，而非目标方。
 
@@ -830,15 +830,15 @@ await runTool({
 **低效模式**：
 ```jsonc
 // ❌ 逐条删除
-await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75"] })
-await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e"] })
-await deletePages({ pageUrls: ["https://www.notion.so/33ec9fa44e9780138c89f8c2f905d804"] })
+await deletePages({ pageUrls: ["https://www.notion.so/88a395759257472b89f9d38ae3a1df2f"] })
+await deletePages({ pageUrls: ["https://www.notion.so/16367caadd7e43a9ac3ae6592a8c6370"] })
+await deletePages({ pageUrls: ["https://www.notion.so/df702feac8104b7ea968cbb1719130f5"] })
 ```
 
 **优化方案**：
 ```jsonc
 // ✅ 批量删除
-await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/00429878-83b7-4209-8fc4-4f4757072e75", "agent://755c9fa4-4e97-8185-a342-00033edae600/d6640eb9-32d8-4de5-928d-346bbc00b38e", "https://www.notion.so/33ec9fa44e9780138c89f8c2f905d804"] })
+await deletePages({ pageUrls: ["https://www.notion.so/88a395759257472b89f9d38ae3a1df2f", "https://www.notion.so/16367caadd7e43a9ac3ae6592a8c6370", "https://www.notion.so/df702feac8104b7ea968cbb1719130f5"] })
 ```
 
 **同理适用于**：
@@ -855,9 +855,9 @@ await deletePages({ pageUrls: ["agent://755c9fa4-4e97-8185-a342-00033edae600/004
 **低效模式**：
 ```jsonc
 // ❌ 串行加载无依赖的资源
-const page1 = await loadPage({ url: "integration://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/mcpServer/e79d39d7-a57c-40ec-9ded-60470b1fc2a9" })
-const page2 = await loadPage({ url: "trigger://755c9fa4-4e97-8185-a342-00033edae600/698ee8ff-a788-49fe-b2f4-608ee81dfc40/2821c2ba-e01a-4213-9082-ad754ec83a09" })
-const db = await loadDatabase({ url: "dataSourceUrl" })
+const page1 = await loadPage({ url: "https://www.notion.so/f97e9d750df243d6821f685fcd5103bb" })
+const page2 = await loadPage({ url: "https://www.notion.so/95eea576887845398bbe3c54a9a4bfd5" })
+const db = await loadDatabase({ url: "https://www.notion.so/336c9fa44e978016aa46e7760a6d61ca" })
 ```
 
 **优化方案**：
@@ -916,4 +916,18 @@ await updatePage({
 | `modules/notion/pages/` | `index.ts` | S6.4（contentUpdates）、S6.10（updatePage 合并） |
 | `modules/notion/pages/` | `AGENTS.md` | S6.2（property formats）、S6.3（property naming）、S6.5（wiki） |
 | `modules/notion/pages/` | `page-content-spec.md` | S6.4（database blocks） |
-| `modules/notion/` | `notion-markdown
+| `modules/notion/` | `notion-markdown.md` | S6.4（Markdown 语法） |
+| `modules/notion/databases/` | `index.ts` | S6.3（CREATE-\* 系统）、S6.5（linked database） |
+| `modules/notion/databases/` | `AGENTS.md` | S6.3（identifier 规则）、S6.5（wiki / linked db） |
+| `modules/notion/databases/` | `data-source-sqlite-tables.md` | S6.2（列展开、checkbox、JSON 值） |
+| `modules/notion/databases/` | `dataSourceTypes.ts` | S6.2（property 类型定义） |
+| `modules/notion/agents/` | `index.ts` | S6.1（updateAgent 权限配置） |
+| `modules/notion/` | `integration.ts` | S6.1（权限类型、interact 格式） |
+| `modules/notion/threads/` | `index.ts` | S6.7（createAndRunThread 约束） |
+| `modules/notion/` | `sharing.ts` | S6.1（sharing vs agent 权限区别） |
+| `modules/search/` | `AGENTS.md` | S6.6（查询构造策略） |
+| `modules/search/` | `index.ts` | S6.6（SearchQueryInput 类型） |
+| `modules/mcpServer/` | `index.ts` | S6.8（MCP 工具调用接口） |
+| `modules/mcpServer/` | `AGENTS.md` | S6.8（连接 key 与路径区别） |
+| `modules/notion/` | `notifications.ts` | S6.8（异常通知） |
+| `modules/system/` | `index.ts` | S6.9（wait / updateTodos） |
